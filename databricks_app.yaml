@@ -1,0 +1,57 @@
+bundle:
+  name: databricks-multi-agent-app
+
+manifest_version: 1
+
+categories:
+  - MULTI_AGENT
+  - DATABRICKS_PLATFORM
+
+environments:
+  default:
+    workspace_dir: /Workspace/Apps/databricks-multi-agent-app
+    machine_spec:
+      kind: python
+      python_version: "3.11"
+
+app:
+  name: "Databricks Multi-Agent Orchestrator"
+  description: "Production multi-agent system for Databricks job/cluster/Unity Catalog queries with MLflow evaluation"
+  version: "0.1.0"
+
+  resources:
+    - type: streamlit
+      name: main_app
+      config:
+        script_path: project/app_streamlit.py
+        python_version: "3.11"
+
+  dependencies:
+    - python-dotenv>=1.0.1
+    - openai>=1.51.0
+    - mlflow>=2.14.0
+    - flask>=3.0.0
+    - pyyaml>=6.0.2
+    - rich>=13.9.0
+
+  permissions:
+    - principal: workspace
+      permission: admin
+
+  secrets:
+    - scope: databricks
+      key: llm_provider
+      env_var: LLM_PROVIDER
+    - scope: databricks
+      key: databricks_host
+      env_var: DATABRICKS_HOST
+    - scope: databricks
+      key: databricks_token
+      env_var: DATABRICKS_TOKEN
+    - scope: databricks
+      key: databricks_model_endpoint
+      env_var: DATABRICKS_MODEL_ENDPOINT
+
+  mlflow:
+    experiment: databricks-multi-agent
+    tracking_uri: databricks

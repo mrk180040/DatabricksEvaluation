@@ -1,0 +1,24 @@
+# Secrets
+.env
+.databrickscfg
+
+# Python envs
+.venv/
+venv/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Build and local deploy staging
+.dbx_streamlit_deploy/
+
+# Experiment artifacts
+mlruns/
+mlflow.db
+
+# OS/editor noise
+.DS_Store
+.vscode/
