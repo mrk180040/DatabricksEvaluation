@@ -66,6 +66,7 @@ Create `.env`:
 cat > .env << 'EOF'
 LLM_PROVIDER=databricks
 DATABRICKS_HOST=https://<your-databricks-workspace>
+DATABRICKS_OBO_TOKEN=<delegated-user-token-optional>
 DATABRICKS_TOKEN=<your-token>
 DATABRICKS_MODEL_ENDPOINT=databricks-meta-llama-3-3-70b-instruct
 LLM_TEMPERATURE=0.1
@@ -74,10 +75,21 @@ LLM_MAX_RETRIES=3
 EOF
 ```
 
+Auth precedence for Databricks provider:
+- `--obo-token` (CLI) or `Authorization: Bearer <token>` (API) / Streamlit sidebar token
+- `DATABRICKS_OBO_TOKEN`
+- `DATABRICKS_TOKEN` (fallback)
+
 ## Run one query
 
 ```bash
 PYTHONPATH=. python -m project.main --mode run --query "Job failed with out of memory"
+```
+
+With delegated OBO token:
+
+```bash
+PYTHONPATH=. python -m project.main --mode run --obo-token "<delegated-user-token>" --query "Job failed with out of memory"
 ```
 
 ## Run evaluation
@@ -121,6 +133,12 @@ from project.main import run_query, run_evaluation
 run_query("How do I grant SELECT privilege on catalog.sales.orders to analyst_group?")
 run_evaluation("project/data/sample_dataset.json", "project/data/evaluation_results.json")
 ```
+
+## API OBO usage
+
+`POST /api/query` accepts delegated token in either:
+- `Authorization: Bearer <delegated-user-token>`
+- `X-Databricks-OBO-Token: <delegated-user-token>`
 # Databricks Multi-Agent + Evaluation Framework
 
 This repository provides:
