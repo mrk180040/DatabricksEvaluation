@@ -68,20 +68,23 @@ with st.sidebar:
 
 @st.cache_resource
 def initialize_system():
-    from project.evaluation import Evaluator
-    from project.orchestration import MultiAgentOrchestrator, OrchestratorConfig
+    from project.agentbricks.evaluator import AgentBricksEvalConfig, AgentBricksEvaluator
+    from project.orchestration import AgentBricksConfig, AgentBricksOrchestrator
     from project.utils import LLMClient, LLMConfig
 
     llm_client = LLMClient(LLMConfig())
-    orchestrator = MultiAgentOrchestrator(
+    orchestrator = AgentBricksOrchestrator(
         llm_client=llm_client,
-        config=OrchestratorConfig(
+        config=AgentBricksConfig(
             confidence_threshold=confidence_threshold,
             fallback_agent="unity_catalog_agent",
-            mlflow_experiment="databricks-multi-agent",
+            mlflow_experiment="databricks-agentbricks",
         ),
     )
-    evaluator = Evaluator(orchestrator=orchestrator)
+    evaluator = AgentBricksEvaluator(
+        orchestrator=orchestrator,
+        config=AgentBricksEvalConfig(use_databricks_judges=True),
+    )
     return orchestrator, evaluator
 
 startup_error = None
@@ -179,6 +182,12 @@ with tab1:
 
                     if governance.get("reason") and governance.get("reason") != "allowed":
                         st.warning(f"Governance reason: {governance.get('reason')}")
+
+                    # Databricks guardrails envelope
+                    guardrails = governance.get("guardrails", {})
+                    if guardrails:
+                        with st.expander("🛡️ AgentBricks Guardrails Trace"):
+                            st.json(guardrails)
                 
                 with st.expander("📋 Full Trace"):
                     st.json(result["trace"])
@@ -253,13 +262,13 @@ with tab2:
                 
                 st.markdown("---")
                 st.markdown("**MLflow Artifacts**")
-                st.info("Evaluation results and trace artifacts logged to MLflow experiment: `databricks-multi-agent-evaluation`")
+                st.info("Evaluation results and trace artifacts logged to MLflow experiment: `databricks-agentbricks-evaluation`")
                 
             except Exception as exc:
                 st.error(f"Evaluation failed: {str(exc)}")
 
 st.markdown("---")
 st.markdown(
-    "<small>Built with LangChain + MLflow | Running in Databricks Workspace</small>",
+    "<small>Built with AgentBricks-style Runtime + MLflow | Running in Databricks Workspace</small>",
     unsafe_allow_html=True,
 )

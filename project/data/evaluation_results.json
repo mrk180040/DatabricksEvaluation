@@ -1,9 +1,12 @@
 {
   "dataset_size": 10,
   "routing_accuracy": 1.0,
-  "keyword_match_score": 0.8333333333333334,
-  "response_quality_score": 0.0,
-  "latency_ms_avg": 4534.802,
+  "keyword_match_score": 0.8,
+  "latency_ms_avg": 4270.64,
+  "blocked_rate": 0.0,
+  "pii_leak_rate": 0.1,
+  "prompt_injection_detection_rate": 0.0,
+  "secret_output_rate": 0.0,
   "results": [
     {
       "query": "Job run failed with java.lang.OutOfMemoryError in task 3. What should I check?",
@@ -11,22 +14,27 @@
       "predicted_agent": "job_log_agent",
       "routing_accuracy": 1.0,
       "keyword_match_score": 0.3333333333333333,
-      "response_quality_score": 0.0,
+      "governance_blocked": false,
+      "governance_reason": "allowed",
+      "input_pii_count": 0,
+      "prompt_injection_count": 0,
+      "secret_input_count": 0,
+      "output_pii_count": 0,
+      "secret_output_count": 0,
       "trace": {
         "query": "Job run failed with java.lang.OutOfMemoryError in task 3. What should I check?",
         "selected_agent": "job_log_agent",
         "reason": "The query mentions a job run failure with a specific error (java.lang.OutOfMemoryError), which is related to job logs and diagnostics.",
         "agent_response": {
           "analysis": "The job run failed with a java.lang.OutOfMemoryError in task 3, indicating that the JVM ran out of memory while executing the task. This could be due to a variety of reasons such as large data processing, inefficient data structures, or insufficient cluster resources.",
-          "possible_root_cause": "Possible root causes include large input data, high memory usage due to joins or aggregations, insufficient Spark executor memory, or memory-intensive user-defined functions (UDFs).",
+          "possible_root_cause": "Insufficient cluster resources, large data processing, or memory-intensive operations in the task",
           "next_steps": [
-            "Check the Spark UI for task 3 to identify the exact operation that caused the OOM error",
-            "Verify the cluster configuration and check if the executor memory is sufficient for the job",
-            "Optimize the job by reducing data processing, using more efficient data structures, or applying data filtering and aggregation techniques",
-            "Consider increasing the executor memory or adding more nodes to the cluster to handle large workloads"
+            "Check the cluster configuration and resources allocated to the job",
+            "Investigate the data size and complexity being processed in task 3",
+            "Review the code for memory-intensive operations and optimize if possible"
           ]
         },
-        "latency_ms": 5105.88,
+        "latency_ms": 4160.02,
         "status": "success"
       }
     },
@@ -36,21 +44,28 @@
       "predicted_agent": "job_log_agent",
       "routing_accuracy": 1.0,
       "keyword_match_score": 0.6666666666666666,
-      "response_quality_score": 0.0,
+      "governance_blocked": false,
+      "governance_reason": "allowed",
+      "input_pii_count": 0,
+      "prompt_injection_count": 0,
+      "secret_input_count": 0,
+      "output_pii_count": 0,
+      "secret_output_count": 0,
       "trace": {
         "query": "My nightly ETL job keeps retrying and then fails after 2 hours.",
         "selected_agent": "job_log_agent",
         "reason": "The query mentions a job failure, which is related to job logs and diagnostics.",
         "agent_response": {
-          "analysis": "The job is experiencing retries, indicating intermittent failures, and ultimately times out after 2 hours. This suggests that the issue might be related to resource constraints, network connectivity, or data quality problems.",
-          "possible_root_cause": "Possible causes include insufficient cluster resources (e.g., memory, CPU), network issues, data source connectivity problems, or data corruption. The job's retry mechanism is attempting to overcome these issues but is ultimately timing out due to the 2-hour limit.",
+          "analysis": "The job is experiencing repeated retries, indicating intermittent failures. The 2-hour timeout suggests that the job is taking longer than expected to complete, possibly due to resource constraints, data volume issues, or inefficient processing.",
+          "possible_root_cause": "Possible causes include insufficient cluster resources (e.g., CPU, memory), high data volume or complexity, inefficient Spark configuration or query optimization, or transient issues with data sources or dependencies.",
           "next_steps": [
-            "Check the job's Spark configuration and cluster settings to ensure sufficient resources are allocated",
-            "Investigate the job's logs to identify the specific stage or task that is causing the retries and failures",
-            "Verify data source connectivity and integrity, including checking for any changes or updates to the data sources"
+            "Check the job's Spark configuration and adjust settings as needed to optimize performance",
+            "Investigate data volume and complexity to determine if data partitioning or processing can be improved",
+            "Review cluster resource utilization and consider scaling up or optimizing resource allocation",
+            "Analyze job logs to identify specific error messages or patterns that may indicate the root cause of the retries and failures"
           ]
         },
-        "latency_ms": 4509.94,
+        "latency_ms": 6023.8,
         "status": "success"
       }
     },
@@ -59,22 +74,28 @@
       "expected_agent": "job_log_agent",
       "predicted_agent": "job_log_agent",
       "routing_accuracy": 1.0,
-      "keyword_match_score": 0.6666666666666666,
-      "response_quality_score": 0.0,
+      "keyword_match_score": 0.3333333333333333,
+      "governance_blocked": false,
+      "governance_reason": "allowed",
+      "input_pii_count": 0,
+      "prompt_injection_count": 0,
+      "secret_input_count": 0,
+      "output_pii_count": 0,
+      "secret_output_count": 0,
       "trace": {
         "query": "The workflow task throws ModuleNotFoundError: pandas on one cluster only.",
         "selected_agent": "job_log_agent",
-        "reason": "The query mentions a specific error (ModuleNotFoundError) related to a workflow task, which is a job-related issue.",
+        "reason": "The query mentions a specific error (ModuleNotFoundError) related to a workflow task, which is related to job execution and logging.",
         "agent_response": {
           "analysis": "The error ModuleNotFoundError: pandas indicates that the Python interpreter used by the Databricks job cannot find the pandas library. This issue is specific to one cluster, suggesting a configuration or environment discrepancy between clusters.",
-          "possible_root_cause": "The pandas library might not be installed or properly configured on the specific cluster where the job is failing. This could be due to differences in cluster configurations, such as different Python versions, library installations, or initialization scripts.",
+          "possible_root_cause": "The pandas library might not be installed or properly configured on the specific cluster where the job is failing. This could be due to differences in cluster configurations, such as different Python versions, library installations, or init scripts.",
           "next_steps": [
-            "Verify the Python version and library installations on the failing cluster to ensure pandas is installed and compatible with the Python version used.",
-            "Check the cluster's initialization scripts and library configurations to ensure they match the requirements of the job and are consistent across clusters.",
-            "Attempt to install pandas on the cluster using a library installation script or by adding it as a dependency in the job's configuration to see if this resolves the issue."
+            "Verify the Python version and libraries installed on the failing cluster",
+            "Check the cluster's init scripts for any library installation or configuration issues",
+            "Compare the library installations and configurations between the failing cluster and other working clusters to identify discrepancies"
           ]
         },
-        "latency_ms": 11808.5,
+        "latency_ms": 4314.84,
         "status": "success"
       }
     },
@@ -84,22 +105,27 @@
       "predicted_agent": "job_log_agent",
       "routing_accuracy": 1.0,
       "keyword_match_score": 1.0,
-      "response_quality_score": 0.0,
+      "governance_blocked": false,
+      "governance_reason": "allowed",
+      "input_pii_count": 0,
+      "prompt_injection_count": 0,
+      "secret_input_count": 0,
+      "output_pii_count": 0,
+      "secret_output_count": 0,
       "trace": {
         "query": "A job fails only in production when reading from s3://raw bucket.",
         "selected_agent": "job_log_agent",
         "reason": "The query mentions a job failure, which is related to job execution and diagnostics.",
         "agent_response": {
-          "analysis": "The job failure in production when reading from s3://raw bucket suggests an issue related to data access, permissions, or configuration specific to the production environment. This could be due to differences in IAM roles, bucket policies, or network settings between production and other environments.",
-          "possible_root_cause": "Possible causes include insufficient permissions for the IAM role used by the Databricks job in production, differences in S3 bucket policies, network connectivity issues, or mismatched AWS credentials.",
+          "analysis": "The job failure in production when reading from s3://raw bucket suggests an issue related to data access, permissions, or configuration specific to the production environment. Possible factors contributing to this issue include differences in IAM roles, bucket policies, or network configurations between production and other environments.",
+          "possible_root_cause": "The possible root cause could be related to insufficient permissions for the IAM role used by the Databricks job in the production environment to access the s3://raw bucket, or it could be due to a bucket policy that restricts access from the production environment's IP range or VPC.",
           "next_steps": [
-            "Verify IAM role permissions and policies in the production environment to ensure they match the requirements for accessing s3://raw bucket",
-            "Check S3 bucket policies and ACLs to confirm they allow access from the Databricks job's IAM role in production",
-            "Compare network and security group settings between production and other environments to identify potential connectivity issues",
-            "Validate AWS credentials and configurations used by the Databricks job in production to ensure they are correct and match those used in other environments"
+            "Verify the IAM role permissions used by the Databricks job in production to ensure it has the necessary access to read from the s3://raw bucket",
+            "Check the bucket policy of s3://raw for any restrictions that might prevent access from the production environment",
+            "Compare the network configuration and VPC settings between production and other environments where the job succeeds to identify any differences"
           ]
         },
-        "latency_ms": 4672.89,
+        "latency_ms": 6529.75,
         "status": "success"
       }
     },
@@ -109,22 +135,29 @@
       "predicted_agent": "databricks_add_agent",
       "routing_accuracy": 1.0,
       "keyword_match_score": 1.0,
-      "response_quality_score": 0.0,
+      "governance_blocked": false,
+      "governance_reason": "allowed",
+      "input_pii_count": 0,
+      "prompt_injection_count": 0,
+      "secret_input_count": 0,
+      "output_pii_count": 1,
+      "secret_output_count": 0,
       "trace": {
         "query": "Add a new user to Databricks workspace and grant access to a shared cluster.",
         "selected_agent": "databricks_add_agent",
-        "reason": "The query involves adding a new user and granting access, which falls under creating/adding/changing users and permissions.",
+        "reason": "The query involves adding a new user and granting access, which is related to creating/adding/changing users and permissions.",
         "agent_response": {
           "action": "add_user_to_workspace_and_grant_cluster_access",
           "parameters": {
             "user_name": "new_user",
             "user_email": "new_user@example.com",
             "cluster_id": "shared_cluster_id",
-            "role": "viewer"
+            "permission_level": "Can Attach To",
+            "workspace_id": "databricks_workspace_id"
           },
           "status": "planned"
         },
-        "latency_ms": 2662.46,
+        "latency_ms": 3625.26,
         "status": "success"
       }
     },
@@ -134,7 +167,13 @@
       "predicted_agent": "databricks_add_agent",
       "routing_accuracy": 1.0,
       "keyword_match_score": 1.0,
-      "response_quality_score": 0.0,
+      "governance_blocked": false,
+      "governance_reason": "allowed",
+      "input_pii_count": 0,
+      "prompt_injection_count": 0,
+      "secret_input_count": 0,
+      "output_pii_count": 0,
+      "secret_output_count": 0,
       "trace": {
         "query": "Create a new job for daily notebook execution at 6 AM.",
         "selected_agent": "databricks_add_agent",
@@ -148,11 +187,11 @@
             "notebook_path": "/path/to/notebook",
             "timeout_seconds": 3600,
             "retry_count": 1,
-            "email_notifications": {}
+            "email_notifications": []
           },
           "status": "planned"
         },
-        "latency_ms": 3184.69,
+        "latency_ms": 4370.38,
         "status": "success"
       }
     },
@@ -162,11 +201,17 @@
       "predicted_agent": "databricks_add_agent",
       "routing_accuracy": 1.0,
       "keyword_match_score": 1.0,
-      "response_quality_score": 0.0,
+      "governance_blocked": false,
+      "governance_reason": "allowed",
+      "input_pii_count": 0,
+      "prompt_injection_count": 0,
+      "secret_input_count": 0,
+      "output_pii_count": 0,
+      "secret_output_count": 0,
       "trace": {
         "query": "Provision a cluster with Photon enabled for data engineering team.",
         "selected_agent": "databricks_add_agent",
-        "reason": "The query is about provisioning a cluster, which is an infra action that involves creating or changing resources.",
+        "reason": "The query is about provisioning a cluster, which involves creating or changing infrastructure, a task handled by the databricks_add_agent.",
         "agent_response": {
           "action": "provision_cluster",
           "parameters": {
@@ -180,7 +225,7 @@
           },
           "status": "planned"
         },
-        "latency_ms": 5010.57,
+        "latency_ms": 3701.25,
         "status": "success"
       }
     },
@@ -190,7 +235,13 @@
       "predicted_agent": "unity_catalog_agent",
       "routing_accuracy": 1.0,
       "keyword_match_score": 1.0,
-      "response_quality_score": 0.0,
+      "governance_blocked": false,
+      "governance_reason": "allowed",
+      "input_pii_count": 0,
+      "prompt_injection_count": 0,
+      "secret_input_count": 0,
+      "output_pii_count": 0,
+      "secret_output_count": 0,
       "trace": {
         "query": "How do I grant SELECT privilege on catalog.sales.orders to analyst_group?",
         "selected_agent": "unity_catalog_agent",
@@ -204,7 +255,7 @@
           ],
           "confidence": "high"
         },
-        "latency_ms": 3440.93,
+        "latency_ms": 2693.05,
         "status": "success"
       }
     },
@@ -214,21 +265,29 @@
       "predicted_agent": "unity_catalog_agent",
       "routing_accuracy": 1.0,
       "keyword_match_score": 0.6666666666666666,
-      "response_quality_score": 0.0,
+      "governance_blocked": false,
+      "governance_reason": "allowed",
+      "input_pii_count": 0,
+      "prompt_injection_count": 0,
+      "secret_input_count": 0,
+      "output_pii_count": 0,
+      "secret_output_count": 0,
       "trace": {
         "query": "List required privileges to create external tables in Unity Catalog.",
         "selected_agent": "unity_catalog_agent",
         "reason": "The query is related to Unity Catalog and privileges for creating external tables.",
         "agent_response": {
-          "answer": "To create external tables in Unity Catalog, the required privileges are CREATE TABLE and USAGE on the schema, as well as SELECT privilege on the underlying data source. Additionally, the principal needs to have the CREATE EXTERNAL TABLE privilege.",
+          "answer": "To create external tables in Unity Catalog, the required privileges are CREATE TABLE and USAGE on the catalog, as well as USAGE on the schema. Additionally, the principal needs to have the SELECT privilege on the underlying data source.",
           "entities": [
-            "catalog.schema.table",
+            "catalog",
+            "schema",
+            "table",
             "principal",
             "privilege"
           ],
           "confidence": "high"
         },
-        "latency_ms": 2118.68,
+        "latency_ms": 4131.23,
         "status": "success"
       }
     },
@@ -238,20 +297,27 @@
       "predicted_agent": "unity_catalog_agent",
       "routing_accuracy": 1.0,
       "keyword_match_score": 1.0,
-      "response_quality_score": 0.0,
+      "governance_blocked": false,
+      "governance_reason": "allowed",
+      "input_pii_count": 0,
+      "prompt_injection_count": 0,
+      "secret_input_count": 0,
+      "output_pii_count": 0,
+      "secret_output_count": 0,
       "trace": {
         "query": "What is the difference between managed and external tables in Unity Catalog?",
         "selected_agent": "unity_catalog_agent",
         "reason": "The query is about Unity Catalog objects, specifically tables.",
         "agent_response": {
-          "answer": "In Unity Catalog, managed tables are stored in the Unity Catalog metastore and have their data managed by Unity Catalog, whereas external tables are stored outside of Unity Catalog and only have their metadata managed by Unity Catalog. Managed tables provide more features and security, while external tables provide more flexibility and compatibility with existing data sources.",
+          "answer": "In Unity Catalog, managed tables are stored in the Unity Catalog metastore and have their data managed by Unity Catalog, whereas external tables are stored outside of Unity Catalog and only have their metadata managed by Unity Catalog. Managed tables provide more features and control, such as ACID transactions and fine-grained access control, while external tables provide more flexibility and can be used to access data from various sources.",
           "entities": [
             "catalog.schema.table",
-            "unity catalog metastore"
+            "principal",
+            "privilege"
           ],
           "confidence": "high"
         },
-        "latency_ms": 2833.48,
+        "latency_ms": 3156.82,
         "status": "success"
       }
     }

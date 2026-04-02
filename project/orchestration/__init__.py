@@ -1,3 +1,13 @@
-from .orchestrator import MultiAgentOrchestrator, OrchestratorConfig
+from .orchestrator import (
+    AgentBricksConfig,
+    AgentBricksOrchestrator,
+    MultiAgentOrchestrator,
+    OrchestratorConfig,
+)
 
-__all__ = ["MultiAgentOrchestrator", "OrchestratorConfig"]
+__all__ = [
+    "AgentBricksOrchestrator",
+    "AgentBricksConfig",
+    "MultiAgentOrchestrator",
+    "OrchestratorConfig",
+]

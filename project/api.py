@@ -10,8 +10,9 @@ from flask import Flask, jsonify, render_template, request
 # Add parent directory to path so we can import project module
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from project.evaluation import Evaluator, write_sample_dataset
-from project.orchestration import MultiAgentOrchestrator, OrchestratorConfig
+from project.evaluation import write_sample_dataset
+from project.agentbricks.evaluator import AgentBricksEvalConfig, AgentBricksEvaluator
+from project.orchestration import AgentBricksConfig, AgentBricksOrchestrator
 from project.utils import LLMClient, LLMConfig
 
 
@@ -20,11 +21,14 @@ def create_app() -> Flask:
 
     llm_config = LLMConfig()
     llm_client = LLMClient(llm_config)
-    orchestrator = MultiAgentOrchestrator(
+    orchestrator = AgentBricksOrchestrator(
         llm_client=llm_client,
-        config=OrchestratorConfig(),
+        config=AgentBricksConfig(),
     )
-    evaluator = Evaluator(orchestrator=orchestrator)
+    evaluator = AgentBricksEvaluator(
+        orchestrator=orchestrator,
+        config=AgentBricksEvalConfig(use_databricks_judges=True),
+    )
 
     @app.route("/")
     def index() -> str:

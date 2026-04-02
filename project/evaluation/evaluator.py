@@ -11,17 +11,17 @@ except Exception:
 
 from project.evaluation.dataset import load_dataset
 from project.evaluation.metrics import average, keyword_match_score, response_quality_score_placeholder, routing_accuracy
-from project.orchestration.orchestrator import MultiAgentOrchestrator
+from project.orchestration.orchestrator import AgentBricksOrchestrator
 from project.utils.logger import get_logger, log_step, write_json
 
 
 @dataclass
 class EvaluationConfig:
-    experiment_name: str = "databricks-multi-agent-evaluation"
+    experiment_name: str = "databricks-agentbricks-evaluation"
 
 
 class Evaluator:
-    def __init__(self, orchestrator: MultiAgentOrchestrator, config: EvaluationConfig | None = None):
+    def __init__(self, orchestrator: AgentBricksOrchestrator, config: EvaluationConfig | None = None):
         self.orchestrator = orchestrator
         self.config = config or EvaluationConfig()
         self.logger = get_logger("evaluator")

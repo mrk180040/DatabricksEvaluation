@@ -1,4 +1,4 @@
-# Databricks Multi-Agent Framework with MLflow Evaluation
+# Databricks AgentBricks Runtime with MLflow Evaluation
 
 ## What is included
 
@@ -121,10 +121,10 @@ from project.main import run_query, run_evaluation
 run_query("How do I grant SELECT privilege on catalog.sales.orders to analyst_group?")
 run_evaluation("project/data/sample_dataset.json", "project/data/evaluation_results.json")
 ```
-# Databricks Multi-Agent + Evaluation Framework
+# Databricks AgentBricks + Evaluation Framework
 
 This repository provides:
-- A LangChain/LangGraph multi-agent framework (supervisor + specialist agents)
+- An AgentBricks-style multi-agent runtime (supervisor + specialist agents)
 - A lightweight evaluation framework (JSONL dataset + metrics + report generation)
 - An end-to-end governance framework (PII, injection, secrets, policy actions, audit logs)
 - Databricks Asset Bundle files for deployment as a Databricks Job
@@ -155,7 +155,7 @@ cp .env.example .env
 
 Then set values in `.env` (or export as shell env vars).
 
-## 2) Run Multi-Agent Framework
+## 2) Run AgentBricks Runtime
 
 ```bash
 PYTHONPATH=src python -m databricks_multi_agent.main "What does Databricks Model Serving do?"

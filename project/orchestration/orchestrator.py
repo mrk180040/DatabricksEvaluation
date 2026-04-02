@@ -11,23 +11,26 @@ except Exception:
     mlflow = None  # type: ignore[assignment]
 
 from project.agents import DatabricksAddAgent, JobLogAgent, SupervisorAgent, UnityCatalogAgent
-from project.governance import GovernancePolicy, GovernancePolicyConfig
+from project.agentbricks.governance import AgentBricksGovernance, AgentBricksGovernanceConfig
 from project.utils.llm_client import LLMClient
 from project.utils.logger import get_logger, log_step, write_json
 
 
 @dataclass
-class OrchestratorConfig:
+class AgentBricksConfig:
     confidence_threshold: str = "medium"
     fallback_agent: str = "unity_catalog_agent"
-    mlflow_experiment: str = "databricks-multi-agent"
+    mlflow_experiment: str = "databricks-agentbricks"
     enable_governance: bool = True
+    # When True, use AgentBricksGovernance (Databricks safety endpoint + guardrails trace)
+    # When False, governance is disabled entirely
+    use_databricks_safety_endpoint: bool = False
 
 
-class MultiAgentOrchestrator:
-    def __init__(self, llm_client: LLMClient, config: OrchestratorConfig | None = None):
+class AgentBricksOrchestrator:
+    def __init__(self, llm_client: LLMClient, config: AgentBricksConfig | None = None):
         self.logger = get_logger("orchestrator")
-        self.config = config or OrchestratorConfig()
+        self.config = config or AgentBricksConfig()
 
         self.supervisor = SupervisorAgent(llm_client=llm_client)
         self.sub_agents = {
@@ -36,7 +39,10 @@ class MultiAgentOrchestrator:
             "unity_catalog_agent": UnityCatalogAgent(llm_client=llm_client),
         }
         self.confidence_rank = {"low": 1, "medium": 2, "high": 3}
-        self.governance = GovernancePolicy(GovernancePolicyConfig()) if self.config.enable_governance else None
+        gov_cfg = AgentBricksGovernanceConfig(
+            use_databricks_safety_endpoint=self.config.use_databricks_safety_endpoint,
+        )
+        self.governance = AgentBricksGovernance(gov_cfg) if self.config.enable_governance else None
 
     def run(self, query: str, expected_agent: str | None = None, track_with_mlflow: bool = True) -> dict[str, Any]:
         start = time.perf_counter()
@@ -47,8 +53,11 @@ class MultiAgentOrchestrator:
         try:
             input_decision = None
             if self.governance is not None:
-                input_decision = self.governance.assess_input(query)
+                _raw_input = self.governance.assess_input(query)
+                input_decision = _raw_input.to_governance_decision()
+                _input_guardrails = _raw_input.guardrails_metadata
                 if not input_decision.allow:
+                    latency_ms = (time.perf_counter() - start) * 1000
                     latency_ms = (time.perf_counter() - start) * 1000
                     trace = {
                         "query": query,
@@ -67,6 +76,7 @@ class MultiAgentOrchestrator:
                         "restricted_topic_count": input_decision.restricted_topic_count,
                         "output_pii_count": 0,
                         "secret_output_count": 0,
+                        "guardrails": _input_guardrails,
                     }
                     return {
                         "final_answer": "Request blocked by governance policy.",
@@ -100,8 +110,11 @@ class MultiAgentOrchestrator:
             final_answer = self._to_final_answer(selected_agent, agent_response)
 
             output_decision = None
+            _output_guardrails: dict[str, Any] = {}
             if self.governance is not None:
-                output_decision = self.governance.assess_output(final_answer)
+                _raw_output = self.governance.assess_output(final_answer)
+                output_decision = _raw_output.to_governance_decision()
+                _output_guardrails = _raw_output.guardrails_metadata
                 if output_decision.allow:
                     final_answer = output_decision.text
                 else:
@@ -124,6 +137,11 @@ class MultiAgentOrchestrator:
                 "restricted_topic_count": input_decision.restricted_topic_count if input_decision else 0,
                 "output_pii_count": output_decision.pii_count if output_decision else 0,
                 "secret_output_count": output_decision.secret_count if output_decision else 0,
+                # Databricks guardrails trace metadata
+                "guardrails": {
+                    "input": _input_guardrails if input_decision else {},
+                    "output": _output_guardrails,
+                },
             }
             if output_decision is not None and not output_decision.allow:
                 governance["blocked"] = True
@@ -215,3 +233,7 @@ class MultiAgentOrchestrator:
             )
 
         return str(response.get("answer", response))
+
+
+OrchestratorConfig = AgentBricksConfig
+MultiAgentOrchestrator = AgentBricksOrchestrator
