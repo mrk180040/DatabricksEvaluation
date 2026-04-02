@@ -41,6 +41,8 @@ class MultiAgentOrchestrator:
     def run(self, query: str, expected_agent: str | None = None, track_with_mlflow: bool = True) -> dict[str, Any]:
         start = time.perf_counter()
         use_mlflow = bool(track_with_mlflow and mlflow is not None)
+        auth_source = self.supervisor.llm_client.auth_source()
+        failed_stage = "input_governance"
         if use_mlflow:
             mlflow.set_experiment(self.config.mlflow_experiment)
         run_ctx = mlflow.start_run(run_name="orchestrator_run") if use_mlflow else None
@@ -52,6 +54,7 @@ class MultiAgentOrchestrator:
                     latency_ms = (time.perf_counter() - start) * 1000
                     trace = {
                         "query": query,
+                        "auth_source": auth_source,
                         "selected_agent": "blocked",
                         "reason": input_decision.reason,
                         "agent_response": {},
@@ -76,6 +79,7 @@ class MultiAgentOrchestrator:
                 query = input_decision.text
 
             log_step(self.logger, "received_query", query=query)
+            failed_stage = "supervisor"
             supervisor_response = self.supervisor.run(query)
             selected_agent = str(supervisor_response["selected_agent"])
             reason = str(supervisor_response["reason"])
@@ -94,6 +98,7 @@ class MultiAgentOrchestrator:
                 reason=reason,
                 confidence=confidence,
             )
+            failed_stage = selected_agent
             agent_response = agent.run(query)
 
             latency_ms = (time.perf_counter() - start) * 1000
@@ -101,6 +106,7 @@ class MultiAgentOrchestrator:
 
             output_decision = None
             if self.governance is not None:
+                failed_stage = "output_governance"
                 output_decision = self.governance.assess_output(final_answer)
                 if output_decision.allow:
                     final_answer = output_decision.text
@@ -109,6 +115,7 @@ class MultiAgentOrchestrator:
 
             trace = {
                 "query": query,
+                "auth_source": auth_source,
                 "selected_agent": selected_agent,
                 "reason": reason,
                 "agent_response": agent_response,
@@ -149,11 +156,16 @@ class MultiAgentOrchestrator:
 
         except Exception as exc:
             latency_ms = (time.perf_counter() - start) * 1000
+            error_type = type(exc).__name__
             trace = {
                 "query": query,
+                "auth_source": auth_source,
                 "selected_agent": "none",
                 "reason": f"orchestration_exception: {exc}",
                 "agent_response": {},
+                "failed_stage": failed_stage,
+                "error_type": error_type,
+                "error_message": str(exc),
                 "latency_ms": round(latency_ms, 2),
                 "status": "failure",
             }
@@ -161,6 +173,9 @@ class MultiAgentOrchestrator:
                 mlflow.log_metric("latency", latency_ms)
                 mlflow.log_param("user_query", query)
                 mlflow.log_param("selected_agent", "none")
+                mlflow.log_param("status", "failure")
+                mlflow.log_param("failed_stage", failed_stage)
+                mlflow.log_param("error_type", error_type)
                 with tempfile.TemporaryDirectory() as tmp_dir:
                     trace_path = f"{tmp_dir}/trace.json"
                     write_json(trace_path, trace)
@@ -168,7 +183,13 @@ class MultiAgentOrchestrator:
 
             log_step(self.logger, "orchestration_failed", error=str(exc), latency_ms=round(latency_ms, 2))
             return {
-                "final_answer": "Request processing failed.",
+                "final_answer": "",
+                "error": {
+                    "type": error_type,
+                    "message": str(exc),
+                    "stage": failed_stage,
+                    "auth_source": auth_source,
+                },
                 "trace": trace,
             }
         finally:

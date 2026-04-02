@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 import sys
+import hashlib
 from pathlib import Path
 
 import streamlit as st
@@ -53,6 +54,12 @@ with st.sidebar:
         ["low", "medium", "high"],
         index=1,
     )
+
+    obo_token_input = st.text_input(
+        "Databricks OBO Token (optional)",
+        type="password",
+        help="Used for delegated user access. If empty, app falls back to DATABRICKS_OBO_TOKEN or DATABRICKS_TOKEN.",
+    ).strip()
     
     st.markdown("---")
     st.markdown("**System Status**")
@@ -60,23 +67,35 @@ with st.sidebar:
         from project.utils import LLMClient, LLMConfig
 
         llm_config = LLMConfig()
-        llm_available = LLMClient(llm_config).available()
+        llm_client = LLMClient(llm_config, access_token=obo_token_input or None)
+        llm_available = llm_client.available()
+
+        effective_token = (obo_token_input or "").strip() or os.getenv("DATABRICKS_OBO_TOKEN") or os.getenv("DATABRICKS_TOKEN")
+        token_fingerprint = hashlib.sha256(effective_token.encode("utf-8")).hexdigest()[:12] if effective_token else "none"
+        auth_source = llm_client.auth_source()
     except Exception:
         llm_available = False
+        token_fingerprint = "unknown"
+        auth_source = "unknown"
     status_color = "🟢" if llm_available else "🔴"
     st.write(f"{status_color} LLM Client: {'Available' if llm_available else 'Not Available'}")
+    st.markdown("---")
+    st.markdown("**Auth Context**")
+    st.write(f"Source: `{auth_source}`")
+    st.write(f"Token fingerprint: `{token_fingerprint}`")
+    st.caption("Fingerprint is a safe hash prefix to compare identities across users.")
 
 @st.cache_resource
-def initialize_system():
+def initialize_system(selected_confidence_threshold: str, obo_token: str | None):
     from project.evaluation import Evaluator
     from project.orchestration import MultiAgentOrchestrator, OrchestratorConfig
     from project.utils import LLMClient, LLMConfig
 
-    llm_client = LLMClient(LLMConfig())
+    llm_client = LLMClient(LLMConfig(), access_token=obo_token)
     orchestrator = MultiAgentOrchestrator(
         llm_client=llm_client,
         config=OrchestratorConfig(
-            confidence_threshold=confidence_threshold,
+            confidence_threshold=selected_confidence_threshold,
             fallback_agent="unity_catalog_agent",
             mlflow_experiment="databricks-multi-agent",
         ),
@@ -88,7 +107,7 @@ startup_error = None
 orchestrator = None
 evaluator = None
 try:
-    orchestrator, evaluator = initialize_system()
+    orchestrator, evaluator = initialize_system(confidence_threshold, obo_token_input or None)
 except Exception as exc:
     startup_error = str(exc)
 
@@ -139,6 +158,18 @@ with tab1:
         with st.spinner("Processing query..."):
             try:
                 result = orchestrator.run(query=query, track_with_mlflow=True)
+                if result.get("trace", {}).get("status") != "success":
+                    error = result.get("error", {})
+                    st.error(
+                        "LLM request failed "
+                        f"at stage `{error.get('stage', 'unknown')}` "
+                        f"using auth source `{error.get('auth_source', 'unknown')}`."
+                    )
+                    if error.get("message"):
+                        st.code(str(error["message"]))
+                    with st.expander("📋 Failure Trace"):
+                        st.json(result.get("trace", {}))
+                    st.stop()
                 
                 st.success("Query processed successfully")
                 

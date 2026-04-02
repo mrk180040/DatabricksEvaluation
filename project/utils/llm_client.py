@@ -12,6 +12,22 @@ except Exception:
     OpenAI = None  # type: ignore[assignment]
 
 
+class LLMClientError(RuntimeError):
+    """Base class for LLM client failures."""
+
+
+class LLMNotConfiguredError(LLMClientError):
+    """Raised when the provider client cannot be constructed."""
+
+
+class LLMCompletionError(LLMClientError):
+    """Raised when completion retries are exhausted."""
+
+
+class LLMResponseFormatError(LLMClientError):
+    """Raised when the model response is not valid JSON or schema-compatible."""
+
+
 @dataclass
 class LLMConfig:
     provider: str = os.getenv("LLM_PROVIDER", "databricks")
@@ -22,8 +38,9 @@ class LLMConfig:
 
 
 class LLMClient:
-    def __init__(self, config: LLMConfig | None = None):
+    def __init__(self, config: LLMConfig | None = None, access_token: str | None = None):
         self.config = config or LLMConfig()
+        self._access_token_override = access_token
         self.client = self._build_client()
 
     def _build_client(self) -> OpenAI | None:
@@ -32,7 +49,7 @@ class LLMClient:
         provider = self.config.provider.lower()
         if provider == "databricks":
             host = os.getenv("DATABRICKS_HOST", "").rstrip("/")
-            token = os.getenv("DATABRICKS_TOKEN")
+            token = self._resolve_databricks_token()
             if not host or not token:
                 return None
             return OpenAI(api_key=token, base_url=f"{host}/serving-endpoints")
@@ -44,6 +61,29 @@ class LLMClient:
             return OpenAI(api_key=api_key)
 
         return None
+
+    def _resolve_databricks_token(self) -> str | None:
+        if self._access_token_override:
+            return self._access_token_override
+        return os.getenv("DATABRICKS_OBO_TOKEN") or os.getenv("DATABRICKS_TOKEN")
+
+    def auth_source(self) -> str:
+        provider = self.config.provider.lower()
+        if provider == "databricks":
+            if self._access_token_override:
+                return "request_access_token"
+            if os.getenv("DATABRICKS_OBO_TOKEN"):
+                return "env_obo_token"
+            if os.getenv("DATABRICKS_TOKEN"):
+                return "env_pat_token"
+            return "none"
+        if provider == "openai":
+            return "openai_api_key" if os.getenv("OPENAI_API_KEY") else "none"
+        return "unknown"
+
+    def set_access_token(self, access_token: str | None) -> None:
+        self._access_token_override = access_token
+        self.client = self._build_client()
 
     def available(self) -> bool:
         return self.client is not None
@@ -57,7 +97,9 @@ class LLMClient:
         max_tokens: int | None = None,
     ) -> str:
         if self.client is None:
-            raise RuntimeError("LLM client is not configured. Missing credentials or unsupported provider.")
+            raise LLMNotConfiguredError(
+                f"LLM client is not configured for provider={self.config.provider} auth_source={self.auth_source()}."
+            )
 
         last_err: Exception | None = None
         for attempt in range(1, self.config.max_retries + 1):
@@ -78,31 +120,36 @@ class LLMClient:
                     break
                 time.sleep(0.5 * attempt)
 
-        raise RuntimeError(f"LLM completion failed after retries: {last_err}")
+        raise LLMCompletionError(
+            f"LLM completion failed after retries for provider={self.config.provider} "
+            f"model={self.config.model} auth_source={self.auth_source()}: {last_err}"
+        )
 
     def json_completion(
         self,
         *,
         system_prompt: str,
         user_prompt: str,
-        fallback: dict[str, Any],
     ) -> dict[str, Any]:
-        try:
-            raw = self.chat_completion(system_prompt=system_prompt, user_prompt=user_prompt)
-            return self._safe_json(raw, fallback=fallback)
-        except Exception:
-            return fallback
+        raw = self.chat_completion(system_prompt=system_prompt, user_prompt=user_prompt)
+        return self._safe_json(raw)
 
     @staticmethod
-    def _safe_json(text: str, fallback: dict[str, Any]) -> dict[str, Any]:
+    def _safe_json(text: str) -> dict[str, Any]:
         try:
-            return json.loads(text)
+            parsed = json.loads(text)
+            if not isinstance(parsed, dict):
+                raise LLMResponseFormatError("Model returned JSON that is not an object.")
+            return parsed
         except json.JSONDecodeError:
             start = text.find("{")
             end = text.rfind("}")
             if start != -1 and end != -1 and start < end:
                 try:
-                    return json.loads(text[start : end + 1])
+                    parsed = json.loads(text[start : end + 1])
+                    if not isinstance(parsed, dict):
+                        raise LLMResponseFormatError("Model returned embedded JSON that is not an object.")
+                    return parsed
                 except json.JSONDecodeError:
-                    return fallback
-            return fallback
+                    raise LLMResponseFormatError("Model returned invalid JSON response.")
+            raise LLMResponseFormatError("Model response did not contain valid JSON.")
