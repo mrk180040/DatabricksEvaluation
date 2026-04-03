@@ -31,7 +31,7 @@ import mlflow
 from langchain_core.messages import HumanMessage
 
 from project.agents.graph import build_databricks_agent_graph, initial_state
-from project.utils.llm_client import LLMClient, LLMConfig
+from project.utils.databricks_llm import make_chat_model
 
 
 class MultiAgentWrapper(mlflow.pyfunc.PythonModel):
@@ -52,10 +52,10 @@ class MultiAgentWrapper(mlflow.pyfunc.PythonModel):
 
         The ``context`` parameter is required by the MLflow pyfunc interface
         but is intentionally unused here — all configuration is read from
-        environment variables (``DATABRICKS_HOST``, ``DATABRICKS_OBO_TOKEN``).
+        environment variables (``DATABRICKS_HOST``, ``DATABRICKS_TOKEN``).
+        ``ChatDatabricks`` picks up Databricks SDK auth automatically.
         """
-        llm_client = LLMClient(LLMConfig())
-        self._graph = build_databricks_agent_graph(llm_client)
+        self._graph = build_databricks_agent_graph(make_chat_model())
 
     def predict(
         self,

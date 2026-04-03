@@ -1,7 +1,7 @@
 """
-Unit tests for the Databricks multi-agent LangGraph framework.
+Unit tests for the Databricks LangChain/LangGraph multi-agent framework.
 
-These tests mock the LLM so they run without a Databricks token and without
+All LLM calls are mocked so tests run without a Databricks token and without
 network calls.
 """
 
@@ -11,6 +11,27 @@ from unittest.mock import MagicMock, patch
 
 import pandas as pd
 import pytest
+
+
+# ---------------------------------------------------------------------------
+# Helper: mock ChatDatabricks (BaseChatModel)
+# ---------------------------------------------------------------------------
+
+def _mock_chat_model(json_payload: dict):
+    """
+    Return a mock that behaves like a LangChain ``BaseChatModel`` inside an LCEL chain.
+
+    We use ``RunnableLambda`` so the mock is a proper LangChain ``Runnable`` and
+    participates correctly in the ``prompt | model | parser`` chain composition.
+    """
+    import json
+    from langchain_core.messages import AIMessage
+    from langchain_core.runnables import RunnableLambda
+
+    def _fake_invoke(messages):
+        return AIMessage(content=json.dumps(json_payload))
+
+    return RunnableLambda(_fake_invoke)
 
 
 # ---------------------------------------------------------------------------
@@ -27,21 +48,13 @@ class TestDatabricksAgentGraphStructure:
         assert state["final_answer"] == ""
 
     def test_build_returns_compiled_graph(self):
-        """build_databricks_agent_graph should compile without error when given a
-        valid (but unconfigured) LLMClient."""
         from project.agents.graph import build_databricks_agent_graph
-        from project.utils.llm_client import LLMClient, LLMConfig
-
-        client = LLMClient(LLMConfig())
-        graph = build_databricks_agent_graph(client)
+        graph = build_databricks_agent_graph(_mock_chat_model({}))
         assert graph is not None
 
     def test_graph_has_expected_nodes(self):
         from project.agents.graph import build_databricks_agent_graph
-        from project.utils.llm_client import LLMClient, LLMConfig
-
-        client = LLMClient(LLMConfig())
-        graph = build_databricks_agent_graph(client)
+        graph = build_databricks_agent_graph(_mock_chat_model({}))
         node_names = set(graph.get_graph().nodes.keys())
         assert "supervisor" in node_names
         assert "job_log_agent" in node_names
@@ -50,22 +63,15 @@ class TestDatabricksAgentGraphStructure:
 
 
 # ---------------------------------------------------------------------------
-# Tests for project/agents/* (individual agent logic — mocked LLMClient)
+# Tests for project/agents/* (individual agent LCEL chains — mocked model)
 # ---------------------------------------------------------------------------
-
-def _mock_llm_client(json_payload: dict):
-    """Return a mocked LLMClient whose json_completion() returns *json_payload*."""
-    client = MagicMock()
-    client.json_completion.return_value = json_payload
-    return client
-
 
 class TestSupervisorAgent:
     def test_valid_response_parsed(self):
         from project.agents.supervisor import SupervisorAgent
 
         agent = SupervisorAgent(
-            llm_client=_mock_llm_client({
+            chat_model=_mock_chat_model({
                 "selected_agent": "job_log_agent",
                 "reason": "job failure question",
                 "confidence": "high",
@@ -80,7 +86,7 @@ class TestSupervisorAgent:
         from project.utils.llm_client import LLMResponseFormatError
 
         agent = SupervisorAgent(
-            llm_client=_mock_llm_client({
+            chat_model=_mock_chat_model({
                 "selected_agent": "unknown_agent",
                 "reason": "x",
                 "confidence": "high",
@@ -95,7 +101,7 @@ class TestJobLogAgent:
         from project.agents.job_log_agent import JobLogAgent
 
         agent = JobLogAgent(
-            llm_client=_mock_llm_client({
+            chat_model=_mock_chat_model({
                 "analysis": "OOM in executor",
                 "possible_root_cause": "large shuffle",
                 "next_steps": ["increase memory", "check logs"],
@@ -111,7 +117,7 @@ class TestDatabricksAddAgent:
         from project.agents.databricks_add_agent import DatabricksAddAgent
 
         agent = DatabricksAddAgent(
-            llm_client=_mock_llm_client({
+            chat_model=_mock_chat_model({
                 "action": "create_cluster",
                 "parameters": {"num_workers": 4},
                 "status": "planned",
@@ -127,7 +133,7 @@ class TestUnityCatalogAgent:
         from project.agents.unity_catalog_agent import UnityCatalogAgent
 
         agent = UnityCatalogAgent(
-            llm_client=_mock_llm_client({
+            chat_model=_mock_chat_model({
                 "answer": "Use GRANT SELECT ON TABLE ...",
                 "entities": ["catalog.schema.table", "analyst_group"],
                 "confidence": "high",

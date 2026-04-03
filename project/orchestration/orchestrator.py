@@ -15,6 +15,7 @@ from langchain_core.messages import HumanMessage
 
 from project.agents.graph import DatabricksAgentState, build_databricks_agent_graph
 from project.governance import GovernancePolicy, GovernancePolicyConfig
+from project.utils.databricks_llm import make_chat_model
 from project.utils.llm_client import LLMClient, LLMNotConfiguredError
 from project.utils.logger import get_logger, log_step, write_json
 
@@ -29,13 +30,21 @@ class OrchestratorConfig:
 
 class MultiAgentOrchestrator:
     """
-    LangGraph-backed multi-agent orchestrator for Databricks operations.
+    Databricks LangChain/LangGraph multi-agent orchestrator.
 
-    Internally builds a compiled LangGraph ``StateGraph`` that routes queries
-    through a supervisor node to one of three specialist worker nodes
-    (job_log_agent, databricks_add_agent, unity_catalog_agent).  Governance
-    checks and MLflow tracking are applied as pre/post-processing layers
-    around the graph invocation.
+    Architecture
+    ------------
+    Each agent node is a proper LangChain LCEL chain backed by ``ChatDatabricks``
+    (``langchain-databricks`` package), assembled into a LangGraph ``StateGraph``::
+
+        ChatPromptTemplate | ChatDatabricks | JsonOutputParser
+
+    A supervisor node receives the user query, routes to one of three specialist
+    workers (job_log, databricks_add, unity_catalog), and the worker's answer is
+    returned via shared ``DatabricksAgentState``.
+
+    Governance checks (PII, prompt injection, secret detection) and MLflow
+    tracking are applied as pre/post-processing layers around the graph.
     """
 
     # Maps confidence label to a numeric rank for threshold comparison.
@@ -46,24 +55,27 @@ class MultiAgentOrchestrator:
     def __init__(self, llm_client: LLMClient, config: OrchestratorConfig | None = None):
         self.logger = get_logger("orchestrator")
         self.config = config or OrchestratorConfig()
+        # LLMClient is kept for Streamlit auth health checks (available(), auth_source()).
         self.llm_client = llm_client
         self.confidence_rank = self._CONFIDENCE_RANK
         self.governance = GovernancePolicy(GovernancePolicyConfig()) if self.config.enable_governance else None
 
-        # Expose supervisor.llm_client for backward-compat with Streamlit status checks
+        # Backward-compat shim so Streamlit can call orchestrator.supervisor.llm_client.available()
         class _SupervisorProxy:
             def __init__(self, client: LLMClient) -> None:
                 self.llm_client = client
 
         self.supervisor = _SupervisorProxy(llm_client)
 
-        # Lazy-initialised: built on first run so OBO tokens injected after
-        # construction (e.g. Databricks App runtime) are picked up.
+        # The LangGraph graph is lazy-initialised so that OBO tokens injected
+        # after construction (e.g. Databricks App runtime) are picked up.
         self._graph = None
 
     def _get_graph(self):
         if self._graph is None:
-            self._graph = build_databricks_agent_graph(self.llm_client)
+            # Build a ChatDatabricks model and wire it into all agent LCEL chains.
+            chat_model = make_chat_model()
+            self._graph = build_databricks_agent_graph(chat_model)
         return self._graph
 
     def run(self, query: str, expected_agent: str | None = None, track_with_mlflow: bool = True) -> dict[str, Any]:

@@ -4,7 +4,8 @@ LangGraph multi-agent graph for Databricks operations.
 Architecture
 ------------
 A supervisor node receives the user query and routes it to one of three
-specialist worker nodes:
+specialist worker nodes, each implemented as a proper LangChain LCEL chain
+backed by ``ChatDatabricks`` (``langchain-databricks`` package):
 
   • job_log_agent       – Databricks job failure analysis
   • databricks_add_agent – Platform provisioning / configuration planning
@@ -22,9 +23,13 @@ specialist worker nodes:
                          │
                         END
 
-Each worker executes exactly once per query (single-turn).  All nodes share
-a typed ``DatabricksAgentState`` that accumulates LangChain messages so the
-full conversation is available to every downstream node and to MLflow tracing.
+Each agent node is an LCEL chain::
+
+    ChatPromptTemplate | ChatDatabricks | JsonOutputParser
+
+All nodes share a typed ``DatabricksAgentState`` that accumulates
+LangChain messages so the full conversation is available to every
+downstream node and to MLflow tracing.
 """
 
 from __future__ import annotations
@@ -32,6 +37,7 @@ from __future__ import annotations
 import operator
 from typing import Annotated, TypedDict
 
+from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 
 from langgraph.graph import END, StateGraph
@@ -40,7 +46,6 @@ from project.agents.databricks_add_agent import DatabricksAddAgent
 from project.agents.job_log_agent import JobLogAgent
 from project.agents.supervisor import SupervisorAgent
 from project.agents.unity_catalog_agent import UnityCatalogAgent
-from project.utils.llm_client import LLMClient
 
 
 # ---------------------------------------------------------------------------
@@ -71,35 +76,36 @@ _FALLBACK_AGENT = "unity_catalog_agent"
 _VALID_AGENTS = {"job_log_agent", "databricks_add_agent", "unity_catalog_agent"}
 
 
-def build_databricks_agent_graph(llm_client: LLMClient):
+def build_databricks_agent_graph(chat_model: BaseChatModel):
     """
     Build and compile the Databricks multi-agent LangGraph.
 
+    Each agent node is a proper LangChain LCEL chain backed by the
+    provided ``chat_model`` (typically a ``ChatDatabricks`` instance):
+
+        ChatPromptTemplate | chat_model | JsonOutputParser
+
     Parameters
     ----------
-    llm_client:
-        A configured ``LLMClient`` instance.  The underlying chat model is
-        derived via ``llm_client.as_langchain_chat_model()``.
+    chat_model:
+        A LangChain ``BaseChatModel`` — use ``make_chat_model()`` from
+        ``project.utils.databricks_llm`` to get a ``ChatDatabricks`` instance.
 
     Returns
     -------
     A compiled LangGraph ``CompiledGraph`` ready to be invoked with an
     initial ``DatabricksAgentState``::
 
-        graph.invoke({
-            "query": "Job failed with OOMError",
-            "messages": [HumanMessage(content="Job failed with OOMError")],
-            "selected_agent": "",
-            "confidence": "",
-            "reason": "",
-            "agent_response": {},
-            "final_answer": "",
-        })
+        from project.utils.databricks_llm import make_chat_model
+        from project.agents.graph import build_databricks_agent_graph, initial_state
+
+        graph = build_databricks_agent_graph(make_chat_model())
+        result = graph.invoke(initial_state("Job failed with OOMError"))
     """
-    supervisor = SupervisorAgent(llm_client=llm_client)
-    job_log = JobLogAgent(llm_client=llm_client)
-    databricks_add = DatabricksAddAgent(llm_client=llm_client)
-    unity_catalog = UnityCatalogAgent(llm_client=llm_client)
+    supervisor = SupervisorAgent(chat_model=chat_model)
+    job_log = JobLogAgent(chat_model=chat_model)
+    databricks_add = DatabricksAddAgent(chat_model=chat_model)
+    unity_catalog = UnityCatalogAgent(chat_model=chat_model)
 
     # --- nodes --------------------------------------------------------------
 

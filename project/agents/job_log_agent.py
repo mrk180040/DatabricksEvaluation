@@ -1,20 +1,36 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from langchain_core.language_models import BaseChatModel
+from langchain_core.output_parsers import JsonOutputParser
+from langchain_core.prompts import ChatPromptTemplate
 
 from project.configs.prompts import JOB_LOG_AGENT_PROMPT
-from project.utils.llm_client import LLMClient, LLMResponseFormatError
+from project.utils.llm_client import LLMResponseFormatError
 
 
-@dataclass
 class JobLogAgent:
-    llm_client: LLMClient
+    """
+    Diagnoses Databricks job failures using an LCEL chain.
+
+    Chain: ``ChatPromptTemplate | ChatDatabricks | JsonOutputParser``
+    """
+
+    def __init__(self, chat_model: BaseChatModel) -> None:
+        self.chat_model = chat_model
+        self._chain = (
+            ChatPromptTemplate.from_messages([
+                ("system", JOB_LOG_AGENT_PROMPT),
+                ("human", "Analyze this Databricks job issue:\n{query}"),
+            ])
+            | self.chat_model
+            | JsonOutputParser()
+        )
 
     def run(self, query: str) -> dict:
-        payload = self.llm_client.json_completion(
-            system_prompt=JOB_LOG_AGENT_PROMPT,
-            user_prompt=f"Analyze this Databricks job issue:\n{query}",
-        )
+        try:
+            payload = self._chain.invoke({"query": query})
+        except Exception as exc:
+            raise LLMResponseFormatError(f"job_log_agent chain failed: {exc}") from exc
 
         analysis = payload.get("analysis")
         possible_root_cause = payload.get("possible_root_cause")
