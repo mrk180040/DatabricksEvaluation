@@ -91,6 +91,8 @@ class LLMClient:
         self.client = self._build_client()
 
     def available(self) -> bool:
+        if self.client is None:
+            self.client = self._build_client()
         return self.client is not None
 
     def chat_completion(
@@ -101,6 +103,8 @@ class LLMClient:
         temperature: float | None = None,
         max_tokens: int | None = None,
     ) -> str:
+        if self.client is None:
+            self.client = self._build_client()
         if self.client is None:
             if self.config.provider.lower() == "databricks":
                 host = os.getenv("DATABRICKS_HOST", "")
