@@ -90,15 +90,13 @@ class MultiAgentOrchestrator:
                 auth_source=auth_source,
                 host_set=bool(os.getenv("DATABRICKS_HOST")),
                 env_obo_token_set=bool(os.getenv("DATABRICKS_OBO_TOKEN")),
-                env_pat_token_set=bool(os.getenv("DATABRICKS_TOKEN")),
-                access_token_override_provided=bool(self.supervisor.llm_client._access_token_override),
+                access_token_override_provided=self.supervisor.llm_client.has_access_token_override(),
             )
             if not llm_available:
                 raise LLMNotConfiguredError(
                     f"LLM client is not configured for provider={self.supervisor.llm_client.config.provider} "
                     f"auth_source={auth_source}. "
-                    f"Please provide a Databricks token via the OBO Token field, "
-                    f"or set the DATABRICKS_TOKEN or DATABRICKS_OBO_TOKEN environment variable."
+                    f"Ensure DATABRICKS_OBO_TOKEN is set via agent-obo-scope/obo-token in app.yaml."
                 )
             failed_stage = "supervisor"
             supervisor_response = self.supervisor.run(query)

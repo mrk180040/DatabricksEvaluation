@@ -54,7 +54,6 @@ class LLMClient:
             host_set=bool(os.getenv("DATABRICKS_HOST")),
             access_token_override_provided=bool(access_token),
             env_obo_token_set=bool(os.getenv("DATABRICKS_OBO_TOKEN")),
-            env_pat_token_set=bool(os.getenv("DATABRICKS_TOKEN")),
             auth_source=self.auth_source(),
             client_available=self.client is not None,
         )
@@ -88,7 +87,6 @@ class LLMClient:
                     token_set=False,
                     access_token_override_provided=bool(self._access_token_override),
                     env_obo_token_set=bool(os.getenv("DATABRICKS_OBO_TOKEN")),
-                    env_pat_token_set=bool(os.getenv("DATABRICKS_TOKEN")),
                 )
                 return None
             log_step(
@@ -111,41 +109,39 @@ class LLMClient:
         return None
 
     def _resolve_databricks_token(self) -> str | None:
-        """Resolve Databricks token with precedence: request override > OBO env > PAT env."""
+        """Resolve Databricks token with precedence: request override > OBO env."""
         if self._access_token_override:
             log_step(_logger, "token_resolved", source="access_token_override")
             return self._access_token_override
-        # Always check environment variables at resolution time (not at init time)
-        # This handles Streamlit caching and dynamic env var loading scenarios
+        # Always check environment variable at resolution time (not at init time).
+        # This handles Streamlit caching and dynamic env var loading scenarios.
         obo_token = os.getenv("DATABRICKS_OBO_TOKEN")
-        pat_token = os.getenv("DATABRICKS_TOKEN")
         if obo_token:
             log_step(_logger, "token_resolved", source="env_obo_token")
-        elif pat_token:
-            log_step(_logger, "token_resolved", source="env_pat_token")
         else:
             log_step(
                 _logger,
                 "token_resolved",
                 source="none",
                 env_obo_token_set=False,
-                env_pat_token_set=False,
             )
-        return obo_token or pat_token
+        return obo_token
 
     def auth_source(self) -> str:
         provider = self.config.provider.lower()
         if provider == "databricks":
             if self._access_token_override:
-                return "request_access_token"
+                return "env_obo_token"
             if os.getenv("DATABRICKS_OBO_TOKEN"):
                 return "env_obo_token"
-            if os.getenv("DATABRICKS_TOKEN"):
-                return "env_pat_token"
             return "none"
         if provider == "openai":
             return "openai_api_key" if os.getenv("OPENAI_API_KEY") else "none"
         return "unknown"
+
+    def has_access_token_override(self) -> bool:
+        """Return True if an OBO token was passed directly at construction time."""
+        return bool(self._access_token_override)
 
     def set_access_token(self, access_token: str | None) -> None:
         self._access_token_override = access_token
@@ -173,7 +169,6 @@ class LLMClient:
                 host_set=bool(os.getenv("DATABRICKS_HOST")),
                 access_token_override_provided=bool(self._access_token_override),
                 env_obo_token_set=bool(os.getenv("DATABRICKS_OBO_TOKEN")),
-                env_pat_token_set=bool(os.getenv("DATABRICKS_TOKEN")),
                 auth_source=self.auth_source(),
             )
             self.client = self._build_client()
@@ -204,13 +199,13 @@ class LLMClient:
                 if not host:
                     raise LLMNotConfiguredError(
                         "DATABRICKS_HOST is required. "
-                        "Either deploy as a Databricks App (auto-injected) or set DATABRICKS_TOKEN in your secret scope. "
+                        "Deploy as a Databricks App (auto-injected via app.yaml) or set DATABRICKS_HOST manually. "
                         f"auth_source={self.auth_source()}"
                     )
                 if not token:
                     raise LLMNotConfiguredError(
-                        "A Databricks token is required (DATABRICKS_TOKEN or DATABRICKS_OBO_TOKEN). "
-                        "Either deploy as a Databricks App (auto-injected) or set DATABRICKS_TOKEN in your secret scope. "
+                        "DATABRICKS_OBO_TOKEN is required. "
+                        "Deploy as a Databricks App with agent-obo-scope/obo-token configured in app.yaml. "
                         f"auth_source={self.auth_source()}"
                     )
             raise LLMNotConfiguredError(

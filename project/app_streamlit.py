@@ -57,22 +57,16 @@ with st.sidebar:
         index=1,
     )
 
-    obo_token_input = st.text_input(
-        "Databricks OBO Token (optional)",
-        type="password",
-        help="Used for delegated user access. If empty, app falls back to DATABRICKS_OBO_TOKEN or DATABRICKS_TOKEN.",
-    ).strip()
-    
     st.markdown("---")
     st.markdown("**System Status**")
     try:
         from project.utils import LLMClient, LLMConfig
 
         llm_config = LLMConfig()
-        llm_client = LLMClient(llm_config, access_token=obo_token_input or None)
+        llm_client = LLMClient(llm_config)
         llm_available = llm_client.available()
 
-        effective_token = (obo_token_input or "").strip() or os.getenv("DATABRICKS_OBO_TOKEN") or os.getenv("DATABRICKS_TOKEN")
+        effective_token = os.getenv("DATABRICKS_OBO_TOKEN")
         token_fingerprint = hashlib.sha256(effective_token.encode("utf-8")).hexdigest()[:12] if effective_token else "none"
         auth_source = llm_client.auth_source()
     except Exception as e:
@@ -88,13 +82,12 @@ with st.sidebar:
     with st.expander("🔧 Diagnostics (credential check)", expanded=False):
         st.write("**Environment Variables:**")
         st.write(f"- DATABRICKS_HOST: {'✓ Set' if os.getenv('DATABRICKS_HOST') else '✗ Not set'}")
-        st.write(f"- DATABRICKS_TOKEN: {'✓ Set' if os.getenv('DATABRICKS_TOKEN') else '✗ Not set'}")
         st.write(f"- DATABRICKS_OBO_TOKEN: {'✓ Set' if os.getenv('DATABRICKS_OBO_TOKEN') else '✗ Not set'}")
         st.write(f"- LLM_PROVIDER: {os.getenv('LLM_PROVIDER', 'not set')}")
         st.write(f"- DATABRICKS_MODEL_ENDPOINT: {os.getenv('DATABRICKS_MODEL_ENDPOINT', 'not set')}")
         st.write("**Current Auth Source:** " + auth_source)
         if auth_source == "none":
-            st.error("⚠️ No credentials found! Please set DATABRICKS_TOKEN in .env or provide an OBO token above.")
+            st.error("⚠️ No OBO token found! Ensure agent-obo-scope/obo-token is configured in app.yaml.")
     
     st.markdown("---")
     st.markdown("**Auth Context**")
@@ -103,7 +96,7 @@ with st.sidebar:
     st.caption("Fingerprint is a safe hash prefix to compare identities across users.")
 
 @st.cache_resource
-def initialize_system(selected_confidence_threshold: str, obo_token: str | None):
+def initialize_system(selected_confidence_threshold: str):
     from project.evaluation import Evaluator
     from project.orchestration import MultiAgentOrchestrator, OrchestratorConfig
     from project.utils import LLMClient, LLMConfig
@@ -114,12 +107,10 @@ def initialize_system(selected_confidence_threshold: str, obo_token: str | None)
         init_logger,
         "initialize_system_called",
         confidence_threshold=selected_confidence_threshold,
-        obo_token_provided=bool(obo_token),
         env_obo_token_set=bool(os.getenv("DATABRICKS_OBO_TOKEN")),
-        env_pat_token_set=bool(os.getenv("DATABRICKS_TOKEN")),
         host_set=bool(os.getenv("DATABRICKS_HOST")),
     )
-    llm_client = LLMClient(LLMConfig(), access_token=obo_token)
+    llm_client = LLMClient(LLMConfig())
     log_step(
         init_logger,
         "orchestrator_llm_client_created",
@@ -141,7 +132,7 @@ startup_error = None
 orchestrator = None
 evaluator = None
 try:
-    orchestrator, evaluator = initialize_system(confidence_threshold, obo_token_input or None)
+    orchestrator, evaluator = initialize_system(confidence_threshold)
 except Exception as exc:
     startup_error = str(exc)
 
