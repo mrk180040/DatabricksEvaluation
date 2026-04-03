@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import tempfile
 import time
 from dataclasses import dataclass
@@ -80,7 +81,19 @@ class MultiAgentOrchestrator:
 
             log_step(self.logger, "received_query", query=query)
             failed_stage = "configuration"
-            if not self.supervisor.llm_client.available():
+            llm_available = self.supervisor.llm_client.available()
+            log_step(
+                self.logger,
+                "configuration_check",
+                llm_available=llm_available,
+                provider=self.supervisor.llm_client.config.provider,
+                auth_source=auth_source,
+                host_set=bool(os.getenv("DATABRICKS_HOST")),
+                env_obo_token_set=bool(os.getenv("DATABRICKS_OBO_TOKEN")),
+                env_pat_token_set=bool(os.getenv("DATABRICKS_TOKEN")),
+                access_token_override_provided=bool(self.supervisor.llm_client._access_token_override),
+            )
+            if not llm_available:
                 raise LLMNotConfiguredError(
                     f"LLM client is not configured for provider={self.supervisor.llm_client.config.provider} "
                     f"auth_source={auth_source}. "
@@ -189,7 +202,15 @@ class MultiAgentOrchestrator:
                     write_json(trace_path, trace)
                     mlflow.log_artifact(trace_path)
 
-            log_step(self.logger, "orchestration_failed", error=str(exc), latency_ms=round(latency_ms, 2))
+            log_step(
+                self.logger,
+                "orchestration_failed",
+                error=str(exc),
+                error_type=error_type,
+                failed_stage=failed_stage,
+                auth_source=auth_source,
+                latency_ms=round(latency_ms, 2),
+            )
             return {
                 "final_answer": "",
                 "error": {

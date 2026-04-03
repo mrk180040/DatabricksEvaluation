@@ -11,6 +11,10 @@ try:
 except Exception:
     OpenAI = None  # type: ignore[assignment]
 
+from project.utils.logger import get_logger, log_step
+
+_logger = get_logger("llm_client")
+
 
 class LLMClientError(RuntimeError):
     """Base class for LLM client failures."""
@@ -42,34 +46,91 @@ class LLMClient:
         self.config = config or LLMConfig()
         self._access_token_override = access_token
         self.client = self._build_client()
+        log_step(
+            _logger,
+            "llm_client_initialized",
+            provider=self.config.provider,
+            model=self.config.model,
+            host_set=bool(os.getenv("DATABRICKS_HOST")),
+            access_token_override_provided=bool(access_token),
+            env_obo_token_set=bool(os.getenv("DATABRICKS_OBO_TOKEN")),
+            env_pat_token_set=bool(os.getenv("DATABRICKS_TOKEN")),
+            auth_source=self.auth_source(),
+            client_available=self.client is not None,
+        )
 
     def _build_client(self) -> OpenAI | None:
         if OpenAI is None:
+            log_step(_logger, "llm_client_build_failed", reason="openai_package_not_installed")
             return None
         provider = self.config.provider.lower()
         if provider == "databricks":
             host = os.getenv("DATABRICKS_HOST", "").rstrip("/")
             token = self._resolve_databricks_token()
-            if not host or not token:
+            if not host:
+                log_step(
+                    _logger,
+                    "llm_client_build_failed",
+                    provider=provider,
+                    reason="missing_host",
+                    host_set=False,
+                    token_set=bool(token),
+                    auth_source=self.auth_source(),
+                )
                 return None
+            if not token:
+                log_step(
+                    _logger,
+                    "llm_client_build_failed",
+                    provider=provider,
+                    reason="missing_token",
+                    host_set=True,
+                    token_set=False,
+                    access_token_override_provided=bool(self._access_token_override),
+                    env_obo_token_set=bool(os.getenv("DATABRICKS_OBO_TOKEN")),
+                    env_pat_token_set=bool(os.getenv("DATABRICKS_TOKEN")),
+                )
+                return None
+            log_step(
+                _logger,
+                "llm_client_build_succeeded",
+                provider=provider,
+                auth_source=self.auth_source(),
+            )
             return OpenAI(api_key=token, base_url=f"{host}/serving-endpoints")
 
         if provider == "openai":
             api_key = os.getenv("OPENAI_API_KEY")
             if not api_key:
+                log_step(_logger, "llm_client_build_failed", provider=provider, reason="missing_openai_api_key")
                 return None
+            log_step(_logger, "llm_client_build_succeeded", provider=provider, auth_source="openai_api_key")
             return OpenAI(api_key=api_key)
 
+        log_step(_logger, "llm_client_build_failed", provider=provider, reason="unknown_provider")
         return None
 
     def _resolve_databricks_token(self) -> str | None:
         """Resolve Databricks token with precedence: request override > OBO env > PAT env."""
         if self._access_token_override:
+            log_step(_logger, "token_resolved", source="access_token_override")
             return self._access_token_override
         # Always check environment variables at resolution time (not at init time)
         # This handles Streamlit caching and dynamic env var loading scenarios
         obo_token = os.getenv("DATABRICKS_OBO_TOKEN")
         pat_token = os.getenv("DATABRICKS_TOKEN")
+        if obo_token:
+            log_step(_logger, "token_resolved", source="env_obo_token")
+        elif pat_token:
+            log_step(_logger, "token_resolved", source="env_pat_token")
+        else:
+            log_step(
+                _logger,
+                "token_resolved",
+                source="none",
+                env_obo_token_set=False,
+                env_pat_token_set=False,
+            )
         return obo_token or pat_token
 
     def auth_source(self) -> str:
@@ -88,6 +149,12 @@ class LLMClient:
 
     def set_access_token(self, access_token: str | None) -> None:
         self._access_token_override = access_token
+        log_step(
+            _logger,
+            "access_token_updated",
+            access_token_provided=bool(access_token),
+            auth_source=self.auth_source(),
+        )
         self.client = self._build_client()
 
     def _ensure_client(self) -> None:
@@ -99,7 +166,23 @@ class LLMClient:
         are picked up at call-time rather than only at init-time.
         """
         if self.client is None:
+            log_step(
+                _logger,
+                "ensure_client_rebuild_attempt",
+                provider=self.config.provider,
+                host_set=bool(os.getenv("DATABRICKS_HOST")),
+                access_token_override_provided=bool(self._access_token_override),
+                env_obo_token_set=bool(os.getenv("DATABRICKS_OBO_TOKEN")),
+                env_pat_token_set=bool(os.getenv("DATABRICKS_TOKEN")),
+                auth_source=self.auth_source(),
+            )
             self.client = self._build_client()
+            log_step(
+                _logger,
+                "ensure_client_rebuild_result",
+                client_available=self.client is not None,
+                auth_source=self.auth_source(),
+            )
 
     def available(self) -> bool:
         self._ensure_client()

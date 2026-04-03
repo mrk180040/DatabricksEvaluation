@@ -107,8 +107,25 @@ def initialize_system(selected_confidence_threshold: str, obo_token: str | None)
     from project.evaluation import Evaluator
     from project.orchestration import MultiAgentOrchestrator, OrchestratorConfig
     from project.utils import LLMClient, LLMConfig
+    from project.utils.logger import get_logger, log_step
 
+    init_logger = get_logger("app_streamlit")
+    log_step(
+        init_logger,
+        "initialize_system_called",
+        confidence_threshold=selected_confidence_threshold,
+        obo_token_provided=bool(obo_token),
+        env_obo_token_set=bool(os.getenv("DATABRICKS_OBO_TOKEN")),
+        env_pat_token_set=bool(os.getenv("DATABRICKS_TOKEN")),
+        host_set=bool(os.getenv("DATABRICKS_HOST")),
+    )
     llm_client = LLMClient(LLMConfig(), access_token=obo_token)
+    log_step(
+        init_logger,
+        "orchestrator_llm_client_created",
+        client_available=llm_client.available(),
+        auth_source=llm_client.auth_source(),
+    )
     orchestrator = MultiAgentOrchestrator(
         llm_client=llm_client,
         config=OrchestratorConfig(
