@@ -26,7 +26,12 @@ dbutils.library.restartPython()
 
 import os
 import sys
-sys.path.insert(0, "/Workspace/Repos/<your-repo-path>/DatabricksEvaluation")  # adjust to your repo path
+import os
+
+# Resolve the repo root relative to this notebook's location so the import
+# works regardless of which Repos path it is cloned to.
+_repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__))) if "__file__" in dir() else "/Workspace/Repos/<your-repo-path>/DatabricksEvaluation"
+sys.path.insert(0, _repo_root)
 
 # ---------------------------------------------------------------------------
 # Unity Catalog settings
@@ -95,7 +100,7 @@ def predict_fn(model_input: pd.DataFrame) -> pd.DataFrame:
 # Build the MLflow dataset (targets column is ground_truth when present)
 targets_col = "ground_truth" if "ground_truth" in eval_df.columns else None
 mlflow_dataset = mlflow.data.from_pandas(
-    eval_df.rename(columns={"question": "question"}),
+    eval_df,
     name="unity_catalog_eval_dataset",
     targets=targets_col,
 )

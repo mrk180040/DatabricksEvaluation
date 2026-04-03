@@ -47,18 +47,27 @@ class MultiAgentWrapper(mlflow.pyfunc.PythonModel):
     ``pandas.DataFrame`` with a single column **``answer``** (str).
     """
 
-    def load_context(self, context: mlflow.pyfunc.PythonModelContext) -> None:  # noqa: ARG002
-        """Build the compiled LangGraph once at model-load time."""
+    def load_context(self, context: mlflow.pyfunc.PythonModelContext) -> None:
+        """Build the compiled LangGraph once at model-load time.
+
+        The ``context`` parameter is required by the MLflow pyfunc interface
+        but is intentionally unused here — all configuration is read from
+        environment variables (``DATABRICKS_HOST``, ``DATABRICKS_OBO_TOKEN``).
+        """
         llm_client = LLMClient(LLMConfig())
         self._graph = build_databricks_agent_graph(llm_client)
 
     def predict(
         self,
-        context: mlflow.pyfunc.PythonModelContext,  # noqa: ARG002
+        context: mlflow.pyfunc.PythonModelContext,
         model_input: pd.DataFrame,
     ) -> pd.DataFrame:
         """
         Run the multi-agent graph for each row in *model_input*.
+
+        The ``context`` parameter is required by the MLflow pyfunc interface
+        but is intentionally unused here — model state is held in
+        ``self._graph`` which is initialised in ``load_context``.
 
         Parameters
         ----------

@@ -67,7 +67,12 @@ print(f"Registry target: {FULL_MODEL_NAME}")
 # COMMAND ----------
 
 import sys
-sys.path.insert(0, "/Workspace/Repos/<your-repo-path>/DatabricksEvaluation")  # adjust to your repo path
+import os
+
+# Resolve the repo root relative to this notebook's location so the import
+# works regardless of which Repos path it is cloned to.
+_repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__))) if "__file__" in dir() else "/Workspace/Repos/<your-repo-path>/DatabricksEvaluation"
+sys.path.insert(0, _repo_root)
 
 from project.utils.llm_client import LLMClient, LLMConfig
 from project.agents.graph import build_databricks_agent_graph, initial_state

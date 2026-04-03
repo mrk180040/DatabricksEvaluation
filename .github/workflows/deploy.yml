@@ -11,6 +11,8 @@ jobs:
     name: Deploy Databricks App
     runs-on: ubuntu-latest
     environment: production
+    permissions:
+      contents: read
 
     steps:
       - name: Checkout repository

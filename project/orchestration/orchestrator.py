@@ -38,11 +38,16 @@ class MultiAgentOrchestrator:
     around the graph invocation.
     """
 
+    # Maps confidence label to a numeric rank for threshold comparison.
+    _CONFIDENCE_RANK: dict[str, int] = {"low": 1, "medium": 2, "high": 3}
+    # Numeric rank used when the confidence label is absent or unrecognised.
+    _DEFAULT_CONFIDENCE_RANK: int = 2  # equivalent to "medium"
+
     def __init__(self, llm_client: LLMClient, config: OrchestratorConfig | None = None):
         self.logger = get_logger("orchestrator")
         self.config = config or OrchestratorConfig()
         self.llm_client = llm_client
-        self.confidence_rank = {"low": 1, "medium": 2, "high": 3}
+        self.confidence_rank = self._CONFIDENCE_RANK
         self.governance = GovernancePolicy(GovernancePolicyConfig()) if self.config.enable_governance else None
 
         # Expose supervisor.llm_client for backward-compat with Streamlit status checks
@@ -143,7 +148,7 @@ class MultiAgentOrchestrator:
 
             # Apply confidence-threshold fallback (supervisor already chose;
             # if confidence is below threshold we flag it in the trace).
-            if self.confidence_rank.get(confidence, 0) < self.confidence_rank.get(self.config.confidence_threshold, 2):
+            if self.confidence_rank.get(confidence, 0) < self.confidence_rank.get(self.config.confidence_threshold, self._DEFAULT_CONFIDENCE_RANK):
                 reason = f"Fallback applied due to low confidence ({confidence}). Original: {reason}"
                 selected_agent = self.config.fallback_agent
 
