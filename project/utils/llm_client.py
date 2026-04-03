@@ -63,9 +63,14 @@ class LLMClient:
         return None
 
     def _resolve_databricks_token(self) -> str | None:
+        """Resolve Databricks token with precedence: request override > OBO env > PAT env."""
         if self._access_token_override:
             return self._access_token_override
-        return os.getenv("DATABRICKS_OBO_TOKEN") or os.getenv("DATABRICKS_TOKEN")
+        # Always check environment variables at resolution time (not at init time)
+        # This handles Streamlit caching and dynamic env var loading scenarios
+        obo_token = os.getenv("DATABRICKS_OBO_TOKEN")
+        pat_token = os.getenv("DATABRICKS_TOKEN")
+        return obo_token or pat_token
 
     def auth_source(self) -> str:
         provider = self.config.provider.lower()

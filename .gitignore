@@ -23,3 +23,5 @@ mlflow.db
 # OS/editor noise
 .DS_Store
 .vscode/
+
+.databricks
