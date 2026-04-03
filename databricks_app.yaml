@@ -39,18 +39,18 @@ app:
       permission: admin
 
   secrets:
-    - scope: databricks
-      key: llm_provider
-      env_var: LLM_PROVIDER
-    - scope: databricks
-      key: databricks_host
+    - scope: databricks-evaluation-app
+      key: DATABRICKS_HOST
       env_var: DATABRICKS_HOST
-    - scope: databricks
-      key: databricks_token
+    - scope: databricks-evaluation-app
+      key: DATABRICKS_TOKEN
       env_var: DATABRICKS_TOKEN
-    - scope: databricks
-      key: databricks_model_endpoint
-      env_var: DATABRICKS_MODEL_ENDPOINT
+
+  env:
+    - name: LLM_PROVIDER
+      value: databricks
+    - name: DATABRICKS_MODEL_ENDPOINT
+      value: databricks-meta-llama-3-3-70b-instruct
 
   mlflow:
     experiment: databricks-multi-agent

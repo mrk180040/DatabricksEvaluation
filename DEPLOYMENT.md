@@ -203,8 +203,26 @@ Access via Databricks MLflow UI in workspace.
    - **Flask REST API** (for external clients)
    - **Job** (for scheduled evaluation)
 
-2. **Configure credentials:**
-   - Set `DATABRICKS_HOST`, `DATABRICKS_TOKEN`, etc. in `.env` or Databricks secrets
+2. **Configure credentials (Databricks Secrets — production approach):**
+
+   Run these CLI commands **once** before deploying. Replace placeholder values with your real credentials.
+
+   ```bash
+   # 1. Create the secret scope (only needed once per workspace)
+   databricks secrets create-scope databricks-evaluation-app
+
+   # 2. Store only the sensitive credentials as secrets
+   databricks secrets put-secret databricks-evaluation-app DATABRICKS_HOST \
+     --string-value "https://dbc-8aa0bd78-b5d4.cloud.databricks.com"
+
+   databricks secrets put-secret databricks-evaluation-app DATABRICKS_TOKEN \
+     --string-value "<your-personal-access-token>"
+
+   # 3. Verify the keys are stored (values are never shown)
+   databricks secrets list-secrets databricks-evaluation-app
+   ```
+
+   Non-sensitive config (`LLM_PROVIDER`, `DATABRICKS_MODEL_ENDPOINT`) is set as plain environment variables directly in `app.yaml` — no secret storage required for those.
 
 3. **Deploy:**
    - Follow Option 1/2/3 steps above based on your choice
