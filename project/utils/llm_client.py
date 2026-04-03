@@ -90,7 +90,19 @@ class LLMClient:
         self._access_token_override = access_token
         self.client = self._build_client()
 
+    def _ensure_client(self) -> None:
+        """Lazily rebuild the client if it is not yet initialised.
+
+        Tokens may become available after construction (e.g. Databricks App OBO
+        env-var injection, `.env` file loaded asynchronously, Streamlit cache
+        reuse across reruns).  Re-attempting the build here ensures those tokens
+        are picked up at call-time rather than only at init-time.
+        """
+        if self.client is None:
+            self.client = self._build_client()
+
     def available(self) -> bool:
+        self._ensure_client()
         return self.client is not None
 
     def chat_completion(
@@ -101,6 +113,7 @@ class LLMClient:
         temperature: float | None = None,
         max_tokens: int | None = None,
     ) -> str:
+        self._ensure_client()
         if self.client is None:
             if self.config.provider.lower() == "databricks":
                 host = os.getenv("DATABRICKS_HOST", "")

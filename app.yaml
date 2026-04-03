@@ -5,6 +5,14 @@ command:
   - --server.address=0.0.0.0
   - --server.port=8000
 
+secrets:
+  - scope: databricks-evaluation-app
+    key: DATABRICKS_HOST
+    env_var: DATABRICKS_HOST
+  - scope: databricks-evaluation-app
+    key: DATABRICKS_TOKEN
+    env_var: DATABRICKS_TOKEN
+
 env:
   - name: PYTHONPATH
     value: .
