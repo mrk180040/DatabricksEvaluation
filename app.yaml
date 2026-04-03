@@ -8,16 +8,6 @@ command:
 env:
   - name: PYTHONPATH
     value: .
-  - name: DATABRICKS_HOST
-    valueFrom:
-      secretRef:
-        scope: databricks-evaluation-app
-        key: DATABRICKS_HOST
-  - name: DATABRICKS_TOKEN
-    valueFrom:
-      secretRef:
-        scope: databricks-evaluation-app
-        key: DATABRICKS_TOKEN
   - name: LLM_PROVIDER
     value: databricks
   - name: DATABRICKS_MODEL_ENDPOINT
