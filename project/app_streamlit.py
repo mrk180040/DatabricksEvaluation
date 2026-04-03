@@ -12,8 +12,10 @@ from dotenv import load_dotenv
 # Add parent directory to path so we can import project module
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-
-load_dotenv()
+# Load .env from workspace root (parent of project directory)
+workspace_root = Path(__file__).parent.parent
+env_path = workspace_root / ".env"
+load_dotenv(env_path, override=True)
 
 st.set_page_config(
     page_title="Databricks Multi-Agent Orchestrator",
@@ -73,12 +75,27 @@ with st.sidebar:
         effective_token = (obo_token_input or "").strip() or os.getenv("DATABRICKS_OBO_TOKEN") or os.getenv("DATABRICKS_TOKEN")
         token_fingerprint = hashlib.sha256(effective_token.encode("utf-8")).hexdigest()[:12] if effective_token else "none"
         auth_source = llm_client.auth_source()
-    except Exception:
+    except Exception as e:
         llm_available = False
         token_fingerprint = "unknown"
         auth_source = "unknown"
+        st.warning(f"Error checking LLM status: {e}")
+    
     status_color = "🟢" if llm_available else "🔴"
     st.write(f"{status_color} LLM Client: {'Available' if llm_available else 'Not Available'}")
+    
+    # Diagnostic info in expander
+    with st.expander("🔧 Diagnostics (credential check)", expanded=False):
+        st.write("**Environment Variables:**")
+        st.write(f"- DATABRICKS_HOST: {'✓ Set' if os.getenv('DATABRICKS_HOST') else '✗ Not set'}")
+        st.write(f"- DATABRICKS_TOKEN: {'✓ Set' if os.getenv('DATABRICKS_TOKEN') else '✗ Not set'}")
+        st.write(f"- DATABRICKS_OBO_TOKEN: {'✓ Set' if os.getenv('DATABRICKS_OBO_TOKEN') else '✗ Not set'}")
+        st.write(f"- LLM_PROVIDER: {os.getenv('LLM_PROVIDER', 'not set')}")
+        st.write(f"- DATABRICKS_MODEL_ENDPOINT: {os.getenv('DATABRICKS_MODEL_ENDPOINT', 'not set')}")
+        st.write("**Current Auth Source:** " + auth_source)
+        if auth_source == "none":
+            st.error("⚠️ No credentials found! Please set DATABRICKS_TOKEN in .env or provide an OBO token above.")
+    
     st.markdown("---")
     st.markdown("**Auth Context**")
     st.write(f"Source: `{auth_source}`")
