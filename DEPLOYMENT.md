@@ -211,24 +211,18 @@ Access via Databricks MLflow UI in workspace.
    # 1. Create the secret scope (only needed once per workspace)
    databricks secrets create-scope databricks-evaluation-app
 
-   # 2. Store each secret value
+   # 2. Store only the sensitive credentials as secrets
    databricks secrets put-secret databricks-evaluation-app DATABRICKS_HOST \
      --string-value "https://dbc-8aa0bd78-b5d4.cloud.databricks.com"
 
    databricks secrets put-secret databricks-evaluation-app DATABRICKS_TOKEN \
      --string-value "<your-personal-access-token>"
 
-   databricks secrets put-secret databricks-evaluation-app LLM_PROVIDER \
-     --string-value "databricks"
-
-   databricks secrets put-secret databricks-evaluation-app DATABRICKS_MODEL_ENDPOINT \
-     --string-value "databricks-meta-llama-3-3-70b-instruct"
-
    # 3. Verify the keys are stored (values are never shown)
    databricks secrets list-secrets databricks-evaluation-app
    ```
 
-   The `app.yaml` already references these secrets by scope and key — no tokens are ever committed to the repo.
+   Non-sensitive config (`LLM_PROVIDER`, `DATABRICKS_MODEL_ENDPOINT`) is set as plain environment variables directly in `app.yaml` — no secret storage required for those.
 
 3. **Deploy:**
    - Follow Option 1/2/3 steps above based on your choice

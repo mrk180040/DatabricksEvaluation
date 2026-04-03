@@ -19,12 +19,6 @@ env:
         scope: databricks-evaluation-app
         key: DATABRICKS_TOKEN
   - name: LLM_PROVIDER
-    valueFrom:
-      secretRef:
-        scope: databricks-evaluation-app
-        key: LLM_PROVIDER
+    value: databricks
   - name: DATABRICKS_MODEL_ENDPOINT
-    valueFrom:
-      secretRef:
-        scope: databricks-evaluation-app
-        key: DATABRICKS_MODEL_ENDPOINT
+    value: databricks-meta-llama-3-3-70b-instruct
