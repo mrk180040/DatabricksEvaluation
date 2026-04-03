@@ -34,8 +34,8 @@ A **production-ready multi-agent orchestration system** with:
 streamlit run project/app_streamlit.py
 
 # 2. Then deploy to Databricks workspace
-databricks workspace mkdirs /Workspace/Apps/databricks-multi-agent-app
-databricks workspace import_dir . /Workspace/Apps/databricks-multi-agent-app -o
+databricks workspace mkdirs /Workspace/Apps/databricks-multi-agent
+databricks workspace import_dir . /Workspace/Apps/databricks-multi-agent -o
 
 # 3. In Databricks UI:
 # - Go to Workspace > Apps > Create App

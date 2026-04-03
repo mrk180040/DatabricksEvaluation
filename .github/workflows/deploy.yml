@@ -18,8 +18,8 @@ jobs:
       DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
       DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
       DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
-      APP_NAME: DatabricksEvaluation
-      WORKSPACE_APP_PATH: /Workspace/Apps/DatabricksEvaluation
+      APP_NAME: databricks-multi-agent
+      WORKSPACE_APP_PATH: /Workspace/Apps/databricks-multi-agent
 
     steps:
       - name: Checkout repository

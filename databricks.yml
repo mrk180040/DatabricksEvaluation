@@ -1,9 +1,9 @@
-# This is a Databricks asset bundle definition for DatabricksEvaluation.
+# This is a Databricks asset bundle definition for databricks-multi-agent.
 # The Databricks extension requires databricks.yml configuration file.
 # See https://docs.databricks.com/dev-tools/bundles/index.html for documentation.
 
 bundle:
-  name: DatabricksEvaluation
+  name: databricks-multi-agent
 
 targets:
   dev:
