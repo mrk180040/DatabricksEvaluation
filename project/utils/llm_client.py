@@ -143,6 +143,36 @@ class LLMClient:
         """Return True if an OBO token was passed directly at construction time."""
         return bool(self._access_token_override)
 
+    def as_langchain_chat_model(self):
+        """Return a LangChain ``BaseChatModel`` configured for this client's provider.
+
+        Uses ``langchain_openai.ChatOpenAI`` pointed at the Databricks serving-endpoints
+        OpenAI-compatible API so that the OBO token flow is respected identically to the
+        rest of the application.  Falls back to a standard OpenAI target when
+        ``provider == "openai"``.
+        """
+        from langchain_openai import ChatOpenAI
+
+        provider = self.config.provider.lower()
+        if provider == "databricks":
+            host = os.getenv("DATABRICKS_HOST", "").rstrip("/")
+            token = self._resolve_databricks_token() or "placeholder"
+            return ChatOpenAI(
+                api_key=token,
+                base_url=f"{host}/serving-endpoints",
+                model=self.config.model,
+                temperature=self.config.temperature,
+                max_tokens=self.config.max_tokens,
+            )
+        if provider == "openai":
+            return ChatOpenAI(
+                api_key=os.getenv("OPENAI_API_KEY"),
+                model=self.config.model,
+                temperature=self.config.temperature,
+                max_tokens=self.config.max_tokens,
+            )
+        raise ValueError(f"as_langchain_chat_model: unsupported provider '{self.config.provider}'")
+
     def set_access_token(self, access_token: str | None) -> None:
         self._access_token_override = access_token
         log_step(

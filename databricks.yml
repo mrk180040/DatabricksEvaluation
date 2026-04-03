@@ -12,8 +12,7 @@ targets:
     workspace:
       host: https://dbc-8aa0bd78-b5d4.cloud.databricks.com
 
-  ## Optionally, there could be 'staging' or 'prod' targets here.
-  #
-  # prod:
-  #   workspace:
-  #     host: https://dbc-8aa0bd78-b5d4.cloud.databricks.com
+  prod:
+    mode: production
+    workspace:
+      host: https://dbc-8aa0bd78-b5d4.cloud.databricks.com
