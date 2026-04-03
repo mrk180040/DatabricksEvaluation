@@ -10,9 +10,14 @@ jobs:
   deploy:
     name: Deploy Databricks App
     runs-on: ubuntu-latest
-    environment: prod
+    environment: production
     permissions:
       contents: read
+    env:
+      DATABRICKS_HOST: ${{ vars.DATABRICKS_HOST || 'https://dbc-8aa0bd78-b5d4.cloud.databricks.com' }}
+      DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
+      DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
+      DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
 
     steps:
       - name: Checkout repository
@@ -26,16 +31,29 @@ jobs:
       - name: Install Databricks CLI
         uses: databricks/setup-cli@main
 
+      - name: Validate auth configuration
+        run: |
+          if [[ -z "${DATABRICKS_HOST}" ]]; then
+            echo "DATABRICKS_HOST is not set. Configure repository/environment variable DATABRICKS_HOST."
+            exit 1
+          fi
+
+          if [[ -n "${DATABRICKS_CLIENT_ID}" && -n "${DATABRICKS_CLIENT_SECRET}" ]]; then
+            echo "Using Databricks OAuth M2M credentials (client ID + client secret)."
+            exit 0
+          fi
+
+          if [[ -n "${DATABRICKS_TOKEN}" ]]; then
+            echo "Using Databricks PAT token (DATABRICKS_TOKEN)."
+            exit 0
+          fi
+
+          echo "No Databricks credentials configured for CI."
+          echo "Set either DATABRICKS_CLIENT_ID + DATABRICKS_CLIENT_SECRET, or DATABRICKS_TOKEN in GitHub secrets."
+          exit 1
+
       - name: Validate bundle
         run: databricks bundle validate --target prod
-        env:
-          DATABRICKS_HOST: ${{ vars.DATABRICKS_HOST }}
-          DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
-          DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
 
       - name: Deploy Databricks App
         run: databricks apps deploy --source-code-path . DatabricksEvaluation
-        env:
-          DATABRICKS_HOST: ${{ vars.DATABRICKS_HOST }}
-          DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
-          DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
