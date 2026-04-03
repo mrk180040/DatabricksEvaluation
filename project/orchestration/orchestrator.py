@@ -12,7 +12,7 @@ except Exception:
 
 from project.agents import DatabricksAddAgent, JobLogAgent, SupervisorAgent, UnityCatalogAgent
 from project.governance import GovernancePolicy, GovernancePolicyConfig
-from project.utils.llm_client import LLMClient
+from project.utils.llm_client import LLMClient, LLMNotConfiguredError
 from project.utils.logger import get_logger, log_step, write_json
 
 
@@ -79,6 +79,14 @@ class MultiAgentOrchestrator:
                 query = input_decision.text
 
             log_step(self.logger, "received_query", query=query)
+            failed_stage = "configuration"
+            if not self.supervisor.llm_client.available():
+                raise LLMNotConfiguredError(
+                    f"LLM client is not configured for provider={self.supervisor.llm_client.config.provider} "
+                    f"auth_source={auth_source}. "
+                    f"Please provide a Databricks token via the OBO Token field, "
+                    f"or set the DATABRICKS_TOKEN or DATABRICKS_OBO_TOKEN environment variable."
+                )
             failed_stage = "supervisor"
             supervisor_response = self.supervisor.run(query)
             selected_agent = str(supervisor_response["selected_agent"])
