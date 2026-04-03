@@ -1,27 +1,27 @@
-# Python bytecode
-__pycache__/
-*.py[cod]
-*$py.class
-*.pyo
+# Secrets
+.env
+.databrickscfg
 
-# Virtual environments
+# Python envs
 .venv/
 venv/
-env/
+.venv312/
 
-# MLflow
+# Python cache
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Build and local deploy staging
+.dbx_streamlit_deploy/
+
+# Experiment artifacts
 mlruns/
-mlartifacts/
+mlflow.db
 
-# pytest
-.pytest_cache/
-
-# Distribution / packaging
-dist/
-build/
-*.egg-info/
-
-# Editor
-.idea/
+# OS/editor noise
+.DS_Store
 .vscode/
-*.swp
+
+.databricks
