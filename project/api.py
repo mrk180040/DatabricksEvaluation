@@ -44,7 +44,7 @@ def create_app() -> Flask:
     def selected_token_for_request(obo_token: str | None) -> str | None:
         if obo_token:
             return obo_token
-        return os.getenv("DATABRICKS_OBO_TOKEN") or os.getenv("DATABRICKS_TOKEN")
+        return os.getenv("DATABRICKS_OBO_TOKEN")
 
     def token_fingerprint(token: str | None) -> str | None:
         if not token:
