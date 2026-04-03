@@ -18,6 +18,8 @@ jobs:
       DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
       DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
       DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
+      APP_NAME: DatabricksEvaluation
+      WORKSPACE_APP_PATH: /Workspace/Apps/DatabricksEvaluation
 
     steps:
       - name: Checkout repository
@@ -55,5 +57,12 @@ jobs:
       - name: Validate bundle
         run: databricks bundle validate --target prod
 
+      - name: Sync source to workspace
+        run: |
+          databricks workspace mkdirs "${WORKSPACE_APP_PATH}"
+          databricks workspace import-dir . "${WORKSPACE_APP_PATH}" --overwrite
+
       - name: Deploy Databricks App
-        run: databricks apps deploy --source-code-path . DatabricksEvaluation
+        run: |
+          databricks apps get "${APP_NAME}" >/dev/null 2>&1 || databricks apps create "${APP_NAME}"
+          databricks apps deploy "${APP_NAME}" --source-code-path "${WORKSPACE_APP_PATH}"
