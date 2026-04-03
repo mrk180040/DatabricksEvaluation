@@ -102,6 +102,21 @@ class LLMClient:
         max_tokens: int | None = None,
     ) -> str:
         if self.client is None:
+            if self.config.provider.lower() == "databricks":
+                host = os.getenv("DATABRICKS_HOST", "")
+                token = self._resolve_databricks_token()
+                if not host:
+                    raise LLMNotConfiguredError(
+                        "DATABRICKS_HOST is required. "
+                        "Either deploy as a Databricks App (auto-injected) or set DATABRICKS_TOKEN in your secret scope. "
+                        f"auth_source={self.auth_source()}"
+                    )
+                if not token:
+                    raise LLMNotConfiguredError(
+                        "A Databricks token is required (DATABRICKS_TOKEN or DATABRICKS_OBO_TOKEN). "
+                        "Either deploy as a Databricks App (auto-injected) or set DATABRICKS_TOKEN in your secret scope. "
+                        f"auth_source={self.auth_source()}"
+                    )
             raise LLMNotConfiguredError(
                 f"LLM client is not configured for provider={self.config.provider} auth_source={self.auth_source()}."
             )
