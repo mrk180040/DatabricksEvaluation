@@ -5,6 +5,12 @@
 bundle:
   name: databricks-multi-agent
 
+resources:
+  apps:
+    databricks-multi-agent:
+      name: databricks-multi-agent
+      source_code_path: ${workspace.file_path}
+
 targets:
   dev:
     mode: development
