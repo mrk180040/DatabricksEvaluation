@@ -5,20 +5,24 @@ command:
   - --server.address=0.0.0.0
   - --server.port=8000
 
-secrets:
-  - scope: databricks-evaluation-app
-    key: DATABRICKS_HOST
-    env_var: DATABRICKS_HOST
-  - scope: agent-obo-scope
-    key: obo-token
-    env_var: DATABRICKS_OBO_TOKEN
-  - scope: agent-obo-scope
-    key: obo-token
-    env_var: DATABRICKS_TOKEN
-
 env:
   - name: PYTHONPATH
     value: .
+  - name: DATABRICKS_HOST
+    valueFrom:
+      secretRef:
+        scope: databricks-evaluation-app
+        key: DATABRICKS_HOST
+  - name: DATABRICKS_OBO_TOKEN
+    valueFrom:
+      secretRef:
+        scope: agent-obo-scope
+        key: obo-token
+  - name: DATABRICKS_TOKEN
+    valueFrom:
+      secretRef:
+        scope: agent-obo-scope
+        key: obo-token
   - name: LLM_PROVIDER
     value: databricks
   - name: DATABRICKS_MODEL_ENDPOINT
