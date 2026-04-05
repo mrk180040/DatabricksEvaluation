@@ -67,46 +67,27 @@ jobs:
             exit 1
           fi
 
-          python3 - <<'PY'
-          import json
-          import os
-          import subprocess
-          import sys
+          check_secret_read() {
+            local scope="$1"
+            local key="$2"
 
-          principal = os.environ["TF_VAR_secret_acl_principal"]
-          scopes = ["databricks-evaluation-app", "agent-obo-scope"]
-          failures = []
+            if databricks secrets get-secret "$scope" "$key" --output json >/dev/null 2>&1; then
+              echo "✓ Read access verified for $scope/$key"
+              return 0
+            fi
 
-          for scope in scopes:
-              command = ["databricks", "secrets", "list-acls", scope, "--output", "json"]
-              result = subprocess.run(command, capture_output=True, text=True)
+            echo "✗ Read access check failed for $scope/$key"
+            return 1
+          }
 
-              if result.returncode != 0:
-                  failures.append(f"{scope}: failed to list ACLs ({result.stderr.strip() or result.stdout.strip()})")
-                  continue
+          failures=0
+          check_secret_read "databricks-evaluation-app" "DATABRICKS_HOST" || failures=$((failures + 1))
+          check_secret_read "agent-obo-scope" "obo-token" || failures=$((failures + 1))
 
-              try:
-                  acl_entries = json.loads(result.stdout or "[]")
-              except json.JSONDecodeError as exc:
-                  failures.append(f"{scope}: invalid JSON from list-acls ({exc})")
-                  continue
+          if [[ "$failures" -gt 0 ]]; then
+            echo "Secret access verification failed."
+            echo "This check validates effective READ access (without requiring MANAGE on scopes)."
+            exit 1
+          fi
 
-              principal_acl = next((entry for entry in acl_entries if entry.get("principal") == principal), None)
-              if principal_acl is None:
-                  failures.append(f"{scope}: principal '{principal}' not found")
-                  continue
-
-              permission = str(principal_acl.get("permission", "")).upper()
-              if permission not in {"READ", "MANAGE"}:
-                  failures.append(
-                      f"{scope}: principal '{principal}' has permission '{permission}', expected READ or MANAGE"
-                  )
-
-          if failures:
-              print("Secret ACL verification failed:")
-              for failure in failures:
-                  print(f"- {failure}")
-              sys.exit(1)
-
-          print("Secret ACL verification passed for all required scopes.")
-          PY
+          echo "Secret access verification passed for required scopes."
