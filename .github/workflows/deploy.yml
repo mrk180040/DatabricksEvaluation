@@ -60,10 +60,7 @@ jobs:
       - name: Sync source to workspace
         run: |
           databricks workspace mkdirs "${WORKSPACE_APP_PATH}"
-          IMPORT_DIR=$(mktemp -d)
-          rsync -a --exclude='.git' --exclude='.github' --exclude='.databricks' . "${IMPORT_DIR}/"
-          databricks workspace import-dir "${IMPORT_DIR}" "${WORKSPACE_APP_PATH}" --overwrite
-          rm -rf "${IMPORT_DIR}"
+          databricks workspace import-dir . "${WORKSPACE_APP_PATH}" --overwrite
 
       - name: Deploy Databricks App
         run: |
