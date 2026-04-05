@@ -15,7 +15,6 @@ from langchain_core.messages import HumanMessage
 
 from project.agents.graph import DatabricksAgentState, build_databricks_agent_graph
 from project.governance import GovernancePolicy, GovernancePolicyConfig
-from project.utils.databricks_llm import make_chat_model
 from project.utils.llm_client import LLMClient, LLMNotConfiguredError
 from project.utils.logger import get_logger, log_step, write_json
 
@@ -73,8 +72,12 @@ class MultiAgentOrchestrator:
 
     def _get_graph(self):
         if self._graph is None:
-            # Build a ChatDatabricks model and wire it into all agent LCEL chains.
-            chat_model = make_chat_model()
+            # Use the LLMClient's own chat model so the OBO token (request-scoped
+            # or env-injected) flows correctly through all LCEL agent chains.
+            # This replaces the previous make_chat_model() call which used the
+            # Databricks SDK ambient auth (DATABRICKS_TOKEN) and ignored
+            # DATABRICKS_OBO_TOKEN entirely.
+            chat_model = self.llm_client.as_langchain_chat_model()
             self._graph = build_databricks_agent_graph(chat_model)
         return self._graph
 

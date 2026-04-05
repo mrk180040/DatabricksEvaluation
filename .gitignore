@@ -20,6 +20,12 @@ __pycache__/
 mlruns/
 mlflow.db
 
+# Governance audit logs — written at runtime, contain PII detection records
+governance/logs/*.jsonl
+
+# Generated evaluation output — may contain LLM responses with sensitive data
+project/data/evaluation_results.json
+
 # OS/editor noise
 .DS_Store
 .vscode/

@@ -1,3 +1,28 @@
 .git
 .github
 .databricks
+
+# Development and test files — not needed in the deployed App runtime
+tests/
+notebooks/
+scripts/
+.venv/
+venv/
+.venv312/
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Experiment and local run artifacts
+mlruns/
+mlflow.db
+project/data/evaluation_results.json
+
+# Governance audit logs — written at runtime, not source files
+governance/logs/
+
+# Editor / OS noise
+.DS_Store
+.vscode/
+*.env

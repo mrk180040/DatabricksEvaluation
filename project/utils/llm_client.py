@@ -131,7 +131,7 @@ class LLMClient:
         provider = self.config.provider.lower()
         if provider == "databricks":
             if self._access_token_override:
-                return "env_obo_token"
+                return "request_token"
             if os.getenv("DATABRICKS_OBO_TOKEN"):
                 return "env_obo_token"
             return "none"

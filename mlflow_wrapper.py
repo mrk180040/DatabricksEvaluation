@@ -11,7 +11,7 @@ Register the graph as a Unity Catalog model::
         mlflow.pyfunc.log_model(
             artifact_path="multi_agent",
             python_model=MultiAgentWrapper(),
-            pip_requirements=open("requirements.txt").read().splitlines(),
+            pip_requirements=open("requirements.txt", encoding="utf-8").read().splitlines(),
             registered_model_name="main.agents.databricks_multi_agent",
         )
 

@@ -19,6 +19,12 @@ from project.evaluation import Evaluator, write_sample_dataset
 from project.orchestration import MultiAgentOrchestrator, OrchestratorConfig
 from project.utils import LLMClient, LLMConfig
 
+# Maximum character length for a single query (env-overridable).
+_MAX_QUERY_LENGTH = int(os.getenv("MAX_QUERY_LENGTH", "4000"))
+
+# Directory that evaluate endpoints are allowed to read datasets from.
+_ALLOWED_DATASET_DIR = (Path(__file__).parent / "data").resolve()
+
 
 def create_app() -> Flask:
     app = Flask(__name__, template_folder="templates", static_folder="static")
@@ -65,6 +71,11 @@ def create_app() -> Flask:
         if not query:
             return jsonify({"error": "query is required"}), 400
 
+        if len(query) > _MAX_QUERY_LENGTH:
+            return jsonify(
+                {"error": f"query exceeds maximum length of {_MAX_QUERY_LENGTH} characters"}
+            ), 400
+
         try:
             obo_token = extract_obo_token()
             llm_client = LLMClient(llm_config, access_token=obo_token)
@@ -79,8 +90,12 @@ def create_app() -> Flask:
     @app.route("/api/evaluate", methods=["POST"])
     def api_evaluate() -> dict[str, Any]:
         payload = request.get_json() or {}
-        dataset_path = payload.get("dataset_path", "project/data/sample_dataset.json")
-        output_path = payload.get("output_path", "project/data/evaluation_results.json")
+        raw_dataset_path = payload.get("dataset_path", "project/data/sample_dataset.json")
+
+        # Restrict dataset reads to the allowed data directory to prevent
+        # path traversal attacks.  Only the filename component is used.
+        safe_name = Path(raw_dataset_path).name
+        dataset_path = str(_ALLOWED_DATASET_DIR / safe_name)
 
         try:
             summary = evaluator.evaluate(dataset_path=dataset_path)
