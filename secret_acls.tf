@@ -6,8 +6,12 @@ terraform {
   }
 }
 
+# Auto-detect the identity running `databricks bundle deploy`.
+# This is a service principal during CI/CD and a user during local deploys.
+data "databricks_current_user" "deployer" {}
+
 variable "secret_acl_principal" {
-  description = "Principal to grant secret READ access (user/group/service principal application id)."
+  description = "Override the principal that receives secret READ access. Defaults to the deploying identity when left empty."
   type        = string
   default     = ""
 }
@@ -17,13 +21,15 @@ locals {
     "databricks-evaluation-app",
     "agent-obo-scope",
   ]
-  apply_secret_acls = trim(var.secret_acl_principal) != ""
+  # Use the explicit override when provided; otherwise fall back to the
+  # identity that is running `databricks bundle deploy`.
+  principal = trimspace(var.secret_acl_principal) != "" ? trimspace(var.secret_acl_principal) : data.databricks_current_user.deployer.user_name
 }
 
 resource "databricks_secret_acl" "app_secret_read" {
-  for_each = local.apply_secret_acls ? toset(local.secret_scopes) : toset([])
+  for_each = toset(local.secret_scopes)
 
   scope      = each.value
-  principal  = var.secret_acl_principal
+  principal  = local.principal
   permission = "READ"
 }
