@@ -59,6 +59,7 @@ jobs:
 
       - name: Sync source to workspace
         run: |
+          rm -rf .databricks
           databricks workspace mkdirs "${WORKSPACE_APP_PATH}"
           databricks workspace import-dir . "${WORKSPACE_APP_PATH}" --overwrite
 
