@@ -12,8 +12,6 @@ secrets:
   - scope: agent-obo-scope
     key: obo-token
     env_var: DATABRICKS_OBO_TOKEN
-  # Map the same OBO token to DATABRICKS_TOKEN so the Databricks SDK auth
-  # chain (used by ChatDatabricks / langchain-databricks) also picks it up.
   - scope: agent-obo-scope
     key: obo-token
     env_var: DATABRICKS_TOKEN

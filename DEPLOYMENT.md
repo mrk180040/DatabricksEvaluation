@@ -160,7 +160,7 @@ project/
 1. **`project/api.py`** - Flask REST API server with 3 endpoints
 2. **`project/app_streamlit.py`** - Streamlit UI for Databricks App
 3. **`project/templates/index.html`** - Web UI for Flask
-4. **`databricks_app.yaml`** - Databricks App manifest (optional advanced config)
+4. **`app.yml`** - Databricks App manifest used by App deploy
 
 ---
 
@@ -220,7 +220,7 @@ Access via Databricks MLflow UI in workspace.
    databricks secrets list-secrets databricks-evaluation-app
    ```
 
-   Non-sensitive config (`LLM_PROVIDER`, `DATABRICKS_MODEL_ENDPOINT`) is set as plain environment variables directly in `app.yaml` — no secret storage required for those.
+    Non-sensitive config (`LLM_PROVIDER`, `DATABRICKS_MODEL_ENDPOINT`) is set as plain environment variables directly in `app.yml` — no secret storage required for those.
 
 3. **Deploy:**
    - Follow Option 1/2/3 steps above based on your choice

@@ -213,7 +213,7 @@ NEW:
   project/api.py              ← Flask REST API server (🚀 Deploy this)
   project/app_streamlit.py    ← Streamlit UI (🚀 Deploy this)
   project/templates/          ← HTML/JS assets for Flask
-  databricks_app.yaml         ← Optional app manifest
+  app.yml                     ← Databricks App manifest
   DEPLOYMENT.md               ← Detailed deployment guide
   DEPLOY_NOW.md               ← Quick checklist
 
