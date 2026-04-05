@@ -18,7 +18,7 @@ jobs:
       DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
       DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
       DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
-      TF_VAR_secret_acl_principal: ${{ vars.DATABRICKS_APP_CLIENT_ID || '' }}
+      TF_VAR_secret_acl_principal: ${{ vars.DATABRICKS_APP_CLIENT_ID || secrets.DATABRICKS_CLIENT_ID || '' }}
 
     steps:
       - name: Checkout repository
@@ -58,3 +58,55 @@ jobs:
 
       - name: Deploy bundle
         run: databricks bundle deploy --target prod
+
+      - name: Verify secret ACLs
+        run: |
+          if [[ -z "${TF_VAR_secret_acl_principal}" ]]; then
+            echo "TF_VAR_secret_acl_principal is empty."
+            echo "Set GitHub environment variable DATABRICKS_APP_CLIENT_ID, or ensure secret DATABRICKS_CLIENT_ID is configured."
+            exit 1
+          fi
+
+          python3 - <<'PY'
+          import json
+          import os
+          import subprocess
+          import sys
+
+          principal = os.environ["TF_VAR_secret_acl_principal"]
+          scopes = ["databricks-evaluation-app", "agent-obo-scope"]
+          failures = []
+
+          for scope in scopes:
+              command = ["databricks", "secrets", "list-acls", scope, "--output", "json"]
+              result = subprocess.run(command, capture_output=True, text=True)
+
+              if result.returncode != 0:
+                  failures.append(f"{scope}: failed to list ACLs ({result.stderr.strip() or result.stdout.strip()})")
+                  continue
+
+              try:
+                  acl_entries = json.loads(result.stdout or "[]")
+              except json.JSONDecodeError as exc:
+                  failures.append(f"{scope}: invalid JSON from list-acls ({exc})")
+                  continue
+
+              principal_acl = next((entry for entry in acl_entries if entry.get("principal") == principal), None)
+              if principal_acl is None:
+                  failures.append(f"{scope}: principal '{principal}' not found")
+                  continue
+
+              permission = str(principal_acl.get("permission", "")).upper()
+              if permission not in {"READ", "MANAGE"}:
+                  failures.append(
+                      f"{scope}: principal '{principal}' has permission '{permission}', expected READ or MANAGE"
+                  )
+
+          if failures:
+              print("Secret ACL verification failed:")
+              for failure in failures:
+                  print(f"- {failure}")
+              sys.exit(1)
+
+          print("Secret ACL verification passed for all required scopes.")
+          PY
