@@ -90,7 +90,7 @@ def create_app() -> Flask:
     @app.route("/api/evaluate", methods=["POST"])
     def api_evaluate() -> dict[str, Any]:
         payload = request.get_json() or {}
-        raw_dataset_path = payload.get("dataset_path", "sample_dataset.json")
+        raw_dataset_path = payload.get("dataset_path", "project/data/sample_dataset.json")
 
         # Restrict dataset reads to the allowed data directory to prevent
         # path traversal attacks.  Only the filename component is used.
