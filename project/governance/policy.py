@@ -1,10 +1,16 @@
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass, field
 
 from project.governance.audit import write_audit_event
 from project.governance.pii import detect_pii, redact_pii
 from project.governance.safety import detect_prompt_injection, detect_restricted_topics, detect_secrets
+
+# Default audit log path.  In production, override GOVERNANCE_AUDIT_LOG_PATH
+# to a durable location such as a Unity Catalog volume:
+#   /Volumes/<catalog>/<schema>/<volume>/audit/audit.jsonl
+_DEFAULT_AUDIT_LOG_PATH = os.getenv("GOVERNANCE_AUDIT_LOG_PATH", "governance/logs/audit.jsonl")
 
 
 @dataclass
@@ -19,7 +25,7 @@ class GovernancePolicyConfig:
         default_factory=lambda: ["self-harm", "malware generation", "credential theft"]
     )
     enable_audit_log: bool = True
-    audit_log_path: str = "governance/logs/audit.jsonl"
+    audit_log_path: str = field(default_factory=lambda: _DEFAULT_AUDIT_LOG_PATH)
 
 
 @dataclass
