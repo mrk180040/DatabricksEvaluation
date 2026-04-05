@@ -33,15 +33,13 @@ A **production-ready multi-agent orchestration system** with:
 # 1. Test locally first
 streamlit run project/app_streamlit.py
 
-# 2. Then deploy to Databricks workspace
-databricks workspace mkdirs /Workspace/Apps/databricks-multi-agent
-databricks workspace import_dir . /Workspace/Apps/databricks-multi-agent -o
+# 2. Deploy with Databricks Asset Bundles (same flow as CI)
+databricks bundle validate --target prod
+databricks bundle deploy --target prod
 
-# 3. In Databricks UI:
-# - Go to Workspace > Apps > Create App
-# - Select Streamlit type
-# - Set entrypoint: project/app_streamlit.py
-# - Publish
+# 3. Open app in Databricks UI
+# - App name from databricks.yml (prod): databricks-multi-agent-prod
+# - Source path is managed by bundle: /Workspace/Shared/.bundle/databricks-multi-agent/prod/files
 ```
 
 **Result:** Live app at `https://<workspace>/apps/<app-name>`

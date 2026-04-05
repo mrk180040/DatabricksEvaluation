@@ -66,11 +66,11 @@ project/
 │ Auth:         Automatic workspace authentication               │
 │                                                                 │
 │ Deploy Steps:                                                   │
-│ 1. databricks workspace mkdirs /Workspace/Apps/multi-agent-app  │
-│ 2. databricks workspace import_dir . /Workspace/Apps/... -o     │
-│ 3. Databricks UI: Workspace > Apps > Create App > Streamlit     │
-│ 4. Set entrypoint: project/app_streamlit.py                     │
-│ 5. Publish                                                      │
+│ 1. databricks bundle validate --target prod                     │
+│ 2. databricks bundle deploy --target prod                       │
+│ 3. Databricks UI: open app databricks-multi-agent-prod          │
+│ 4. Bundle-managed source path is used automatically             │
+│ 5. No manual workspace import required                          │
 │                                                                 │
 │ Result: LIVE AT: https://<workspace>/apps/<app-id>              │
 └─────────────────────────────────────────────────────────────────┘
@@ -244,9 +244,10 @@ LOCAL TEST:
   PYTHONPATH=. python -m project.main --mode evaluate
 
 DEPLOY TO DATABRICKS:
-  databricks workspace mkdirs /Workspace/Apps/multi-agent
-  databricks workspace import_dir . /Workspace/Apps/multi-agent -o
-  # Then create app in Databricks UI
+  databricks bundle validate --target prod
+  databricks bundle deploy --target prod
+  # App name in prod: databricks-multi-agent-prod
+  # Source code path managed by bundle under /Workspace/Shared/.bundle/databricks-multi-agent/prod/files
 
 CREDENTIALS NEEDED:
   DATABRICKS_HOST

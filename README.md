@@ -259,7 +259,7 @@ audit_log_path: governance/logs/audit.jsonl
 
 Detectors include:
 - Email
-- Phone number
+- Phone numbers
 - SSN format (`123-45-6789`)
 - Credit-card-like digit sequences
 - Prompt-injection patterns (instruction override/system prompt extraction attempts)
