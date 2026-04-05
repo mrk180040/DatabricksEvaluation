@@ -60,7 +60,6 @@ jobs:
       - name: Sync source to workspace
         run: |
           databricks workspace mkdirs "${WORKSPACE_APP_PATH}"
-          rm -rf .databricks
           databricks workspace import-dir . "${WORKSPACE_APP_PATH}" --overwrite
 
       - name: Deploy Databricks App
