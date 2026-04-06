@@ -6,5 +6,5 @@ langchain-databricks~=0.1.2
 langchain-openai~=0.2.0
 langchain-core~=0.3.0
 langgraph~=0.2.0
-pydantic~=2.0.0
+pydantic>=2.7.4
 pandas~=2.0.0
