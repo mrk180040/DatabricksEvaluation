@@ -9,20 +9,11 @@ env:
   - name: PYTHONPATH
     value: .
   - name: DATABRICKS_HOST
-    valueFrom:
-      secretRef:
-        scope: databricks-evaluation-app
-        key: DATABRICKS_HOST
+    value_from: "{{secrets/databricks-evaluation-app/DATABRICKS_HOST}}"
   - name: DATABRICKS_OBO_TOKEN
-    valueFrom:
-      secretRef:
-        scope: agent-obo-scope
-        key: obo-token
+    value_from: "{{secrets/agent-obo-scope/obo-token}}"
   - name: DATABRICKS_TOKEN
-    valueFrom:
-      secretRef:
-        scope: agent-obo-scope
-        key: obo-token
+    value_from: "{{secrets/agent-obo-scope/obo-token}}"
   - name: LLM_PROVIDER
     value: databricks
   - name: DATABRICKS_MODEL_ENDPOINT
