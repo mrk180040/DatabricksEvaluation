@@ -162,14 +162,14 @@ class LLMClient:
                 base_url=f"{host}/serving-endpoints",
                 model=self.config.model,
                 temperature=self.config.temperature,
-                max_tokens=self.config.max_tokens,
+                model_kwargs={"max_tokens": self.config.max_tokens},
             )
         if provider == "openai":
             return ChatOpenAI(
                 api_key=os.getenv("OPENAI_API_KEY"),
                 model=self.config.model,
                 temperature=self.config.temperature,
-                max_tokens=self.config.max_tokens,
+                model_kwargs={"max_tokens": self.config.max_tokens},
             )
         raise ValueError(f"as_langchain_chat_model: unsupported provider '{self.config.provider}'")
 
