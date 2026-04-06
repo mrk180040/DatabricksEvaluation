@@ -10,6 +10,21 @@ resources:
     databricks-multi-agent:
       name: databricks-multi-agent
       source_code_path: ${workspace.file_path}
+      resources:
+        - name: llm-endpoint
+          serving_endpoint:
+            name: databricks-meta-llama-3-3-70b-instruct
+            permission: CAN_QUERY
+        - name: app-secret-databricks-host
+          secret:
+            scope: databricks-evaluation-app
+            key: DATABRICKS_HOST
+            permission: READ
+        - name: app-secret-obo-token
+          secret:
+            scope: agent-obo-scope
+            key: obo-token
+            permission: READ
 
 targets:
   dev:
