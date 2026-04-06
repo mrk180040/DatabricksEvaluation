@@ -60,6 +60,9 @@ jobs:
       - name: Deploy bundle
         run: databricks bundle deploy --target prod
 
+      - name: Start app
+        run: databricks apps start databricks-multi-agent-prod || true
+
       - name: Verify secret ACLs
         run: |
           echo "Databricks auth identity (for ACL troubleshooting):"
