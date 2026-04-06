@@ -42,6 +42,9 @@ targets:
     workspace:
       host: https://dbc-8aa0bd78-b5d4.cloud.databricks.com
       root_path: /Workspace/Shared/.bundle/${bundle.name}/${bundle.target}
+    permissions:
+      - level: CAN_MANAGE
+        group_name: users
     resources:
       apps:
         databricks-multi-agent:
