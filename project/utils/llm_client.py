@@ -157,12 +157,17 @@ class LLMClient:
         if provider == "databricks":
             host = os.getenv("DATABRICKS_HOST", "").rstrip("/")
             token = self._resolve_databricks_token() or "placeholder"
+            # Databricks Model Serving expects 'max_tokens' in model_kwargs.
+            # Do NOT use max_completion_tokens which is from newer OpenAI API.
+            model_kwargs = {}
+            # Only add max_tokens if explicitly needed; Databricks defaults are usually fine
+            # model_kwargs["max_tokens"] = self.config.max_tokens
             return ChatOpenAI(
                 api_key=token,
                 base_url=f"{host}/serving-endpoints",
                 model=self.config.model,
                 temperature=self.config.temperature,
-                model_kwargs={"max_tokens": self.config.max_tokens},
+                model_kwargs=model_kwargs,
             )
         if provider == "openai":
             return ChatOpenAI(
